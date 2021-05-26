@@ -3,8 +3,8 @@ MPU6050 library by Nils Bebelaar
 */
 
 #include "twi.h"
-#include <avr/io.h>
-#include <util/delay.h>
+#include "millisecs.h"
+#include "uart.h"
 
 #define MPU6050_ADDR 0x68
 
@@ -25,12 +25,20 @@ MPU6050 library by Nils Bebelaar
 
 typedef struct
 {
-    float x;
-    float y;
-    float z;
+    float x_acc;
+    float y_acc;
+    float z_acc;
+    float x_err;
+    float y_err;
+    float z_err;
+    float x_angle;
+    float y_angle;
+    float z_angle;
+    unsigned long lastTimestamp;
 } mpu_data_t;
 
 void ERROR_CHECK(ret_code_t error_code);
-void mpu_init(void);
+void mpu_init(mpu_data_t *mpu_data);
 void mpu_get_gyro_raw(mpu_data_t *mpu_data);
 void mpu_get_gyro(mpu_data_t *mpu_data);
+void mpu_calc_error(mpu_data_t *mpu_data, int amount);
