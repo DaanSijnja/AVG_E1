@@ -126,19 +126,19 @@ static uint8_t tw_read(bool read_ack)
 
 void tw_init(twi_freq_mode_t twi_freq_mode, bool pullup_en)
 {
-	DDRC |= (1 << TW_SDA_PIN) | (1 << TW_SCL_PIN);
+	DDRD |= (1 << TW_SDA_PIN) | (1 << TW_SCL_PIN);
 	if (pullup_en)
 	{
 #if DEBUG_LOG
 		puts(BG "Enable pull-up resistor." RESET);
 #endif
-		PORTC |= (1 << TW_SDA_PIN) | (1 << TW_SCL_PIN);
+		PORTD |= (1 << TW_SDA_PIN) | (1 << TW_SCL_PIN);
 	}
 	else
 	{
-		PORTC &= ~((1 << TW_SDA_PIN) | (1 << TW_SCL_PIN));
+		PORTD &= ~((1 << TW_SDA_PIN) | (1 << TW_SCL_PIN));
 	}
-	DDRC &= ~((1 << TW_SDA_PIN) | (1 << TW_SCL_PIN));
+	DDRD &= ~((1 << TW_SDA_PIN) | (1 << TW_SCL_PIN));
 
 	switch (twi_freq_mode)
 	{
