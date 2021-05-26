@@ -1,11 +1,11 @@
-#include "twi.h"
+#include "Gyrosensor.h"
 
-
-int main(void){
+int main(void)
+{
   //Setup
 
-  while(1){
+  while (1)
+  {
     //Loop
-
   }
 }

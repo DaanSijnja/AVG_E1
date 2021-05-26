@@ -1,29 +1,39 @@
 /*
-RyanLowerr\twi-avr
-https://github.com/RyanLowerr/twi-avr
+Sovichea\avr-i2c-library
+
+Created: 09-Jun-19
+https://github.com/Sovichea/avr-i2c-library
 */
 
-#include<stdint.h>
+#ifndef TWI_MASTER_H_
+#define TWI_MASTER_H_
 
-// TWI genera status codes
-#define TWI_START              0x08 // Start has been transmitted.
-#define TWI_REP_START          0x10 // Repeated start has been transmitted.
+#include <avr/io.h>
+#include <util/twi.h>
+#include <stdbool.h>
 
-// TWI master transmitter status codes
-#define TWI_MTX_ADR_ACK        0x18 // SLA+W has been transmitted and ACK reveived.
-#define TWI_MTX_ADR_NACK       0x20 // SLA+W has been transmitted and NACK reveived.
-#define TWI_MTX_DATA_ACK       0x28 // Data byte has been transmitted and ACK reveived.
-#define TWI_MTX_DATA_NACK      0x30 // Data byte has been transmitted and NACK reveived.
+#define DEBUG_LOG 0
+#define SUCCESS 0
 
-// TWI master reveiver status codeds
-#define TWI_MRX_ADR_ACK        0x40 // SLA+W has been transmitted and ACK reveived.
-#define TWI_MRX_ADR_NACK       0x48 // SLA+W has been transmitted and NACK reveived.
-#define TWI_MRX_DATA_ACK       0x50 // Data byte has been transmitted and ACK reveived.
-#define TWI_MRX_DATA_NACK      0x58 // Data byte has been transmitted and NACK reveived.
+#define TW_SCL_PIN PORTC5
+#define TW_SDA_PIN PORTC4
 
-#define TWI_ACK  1
-#define TWI_NACK 0
+#define TW_SLA_W(ADDR) ((ADDR << 1) | TW_WRITE)
+#define TW_SLA_R(ADDR) ((ADDR << 1) | TW_READ)
+#define TW_READ_ACK 1
+#define TW_READ_NACK 0
 
-void twi_init(void);
-void twi_write(uint8_t sla, uint8_t* data, uint8_t length);
-void twi_read(uint8_t sla, uint8_t* data, uint8_t length);
+typedef uint16_t ret_code_t;
+
+typedef enum
+{
+    TW_FREQ_100K,
+    TW_FREQ_250K,
+    TW_FREQ_400K
+} twi_freq_mode_t;
+
+void tw_init(twi_freq_mode_t twi_freq, bool pullup_en);
+ret_code_t tw_master_transmit(uint8_t slave_addr, uint8_t *p_data, uint8_t len, bool repeat_start);
+ret_code_t tw_master_receive(uint8_t slave_addr, uint8_t *p_data, uint8_t len);
+
+#endif /* TWI_MASTER_H_ */
