@@ -5,7 +5,6 @@ MPU6050 library by Nils Bebelaar
 #include "twi.h"
 #include <avr/io.h>
 #include <util/delay.h>
-#include <Arduino.h>
 
 #define MPU6050_ADDR 0x68
 

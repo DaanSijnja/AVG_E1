@@ -1,17 +1,17 @@
 #include "Gyrosensor.h"
-#include <Arduino.h>
+#include "uart.h"
 
 int main(void)
 {
-  Serial.begin(115200);
-  Serial.println("Initializing TWI_Test Project...");
+  uart_init(115200);
+  puts("Initializing TWI_Test Project...");
 
   /* Initialize project configuration */
   tw_init(TW_FREQ_400K, true); // set I2C Frequency, enable internal pull-up
   mpu_init();
   mpu_data_t accel;
 
-  Serial.println("--------------- Application Started ---------------");
+  puts("--------------- Application Started ---------------");
 
   while (1)
   {
@@ -20,11 +20,9 @@ int main(void)
     //printf("Gyro X: %d\n", accel.x);
     //printf("Gyro Y: %d\n", accel.y);
     //printf("Gyro Z: %d\n", accel.z);
-    Serial.print(accel.x);
-    Serial.print(", ");
-    Serial.print(accel.y);
-    Serial.print(", ");
-    Serial.println(accel.z);
+    printf("%d, ", (int)accel.x);
+    printf("%d, ", (int)accel.y);
+    printf("%d\n", (int)accel.z);
     _delay_ms(1);
   }
 }

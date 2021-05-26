@@ -3,15 +3,15 @@ MPU6050 library by Nils Bebelaar
 */
 
 #include "Gyrosensor.h"
-#include <Arduino.h>
+#include "uart.h"
 
 void ERROR_CHECK(ret_code_t error_code)
 {
     if (error_code != SUCCESS)
     {
-        Serial.println("ERROR");
+        puts("ERROR");
         while (1)
-            ; // loop indefinitely
+            ; // loop forever
     }
 }
 
@@ -40,9 +40,9 @@ void mpu_get_gyro_raw(mpu_data_t *mpu_data)
     ERROR_CHECK(error_code);
 
     //For a range of +-2g, we need to divide the raw values by 16384, according to the datasheet
-    mpu_data->x = ((int16_t)(data[0] << 8 | data[1])) / 16384.0;
-    mpu_data->y = ((int16_t)(data[2] << 8 | data[3])) / 16384.0;
-    mpu_data->z = ((int16_t)(data[4] << 8 | data[5])) / 16384.0;
+    mpu_data->x = ((int16_t)(data[0] << 8 | data[1]));// / 16384.0;
+    mpu_data->y = ((int16_t)(data[2] << 8 | data[3]));// / 16384.0;
+    mpu_data->z = ((int16_t)(data[4] << 8 | data[5]));// / 16384.0;
 }
 
 void mpu_get_gyro(mpu_data_t *mpu_data)
