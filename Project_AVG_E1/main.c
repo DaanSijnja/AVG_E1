@@ -11,8 +11,8 @@ int main(void)
     init_servo();
     while(1)
     {
-        servo1_set_percentage(100);
-        servo2_set_percentage(100);
+        servoleft_set_percentage(-95.4);
+        servoright_set_percentage(100);
     }
     ;
 

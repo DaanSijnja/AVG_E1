@@ -14,57 +14,57 @@
 #define STOP_VALUE	(TIME_VALUE*0.075)
 #define RANGE		(RESET_VALUE*0.025)
 
-ISR(TIMER1_OVF_vect)
+ISR(TIMER_OVF_vect)
 {
 	TCNT1 = RESET_VALUE;
 
-	PORT_1 |= (1<<PIN_1);
-	PORT_2 |= (1<<PIN_2);
+	PORT_left |= (1<<PIN_left);
+	PORT_right |= (1<<PIN_right);
 }
 
-ISR(TIMER1_COMPA_vect)
+ISR(TIMER_COMPA_vect)
 {
-	PORT_1 &= ~(1<<PIN_1);
+	PORT_left &= ~(1<<PIN_left);
 }
 
-ISR(TIMER1_COMPB_vect)
+ISR(TIMER_COMPB_vect)
 {
-	PORT_2 &= ~(1<<PIN_2);
+	PORT_right &= ~(1<<PIN_right);
 }
 
 void init_servo(void)
 {
 	// Config pins as output
-	DDR_1 |= (1<<PIN_1);
-	DDR_2 |= (1<<PIN_2);
+	DDR_left |= (1<<PIN_left);
+	DDR_right |= (1<<PIN_right);
 
 	// Use mode 0, clkdiv = 8
-	TCCR1A = 0;
-	TCCR1B = (0<<CS12) | (1<<CS11) | (0<<CS10);
+	TIMERA = 0;
+	TIMERB = (0<<CS12) | (1<<CS11) | (0<<CS10);
 	// Interrupts on OCA, OCB and OVF
-	TIMSK1 = (1<<OCIE1B) | (1<<OCIE1A) | (1<<TOIE1);
+	TIMERMASK = (1<<OCIE1B) | (1<<OCIE1A) | (1<<TOIE1);
 
-	TCNT1 = RESET_VALUE;
+	TCNT = RESET_VALUE;
 
-	servo1_set_percentage(0);
-	servo2_set_percentage(0);
+	servoleft_set_percentage(0);
+	servoright_set_percentage(0);
 
 	sei();
 }
 
-void servo1_set_percentage(signed char percentage)
+void servoleft_set_percentage(float percentage)
 {
 	if (percentage >= -100 && percentage <= 100)
 	{
-		OCR1A = RESET_VALUE+STOP_VALUE+(RANGE/100*percentage);
+		OCR1A = RESET_VALUE+STOP_VALUE+(RANGE/100.0*(percentage));
 	}
 }
 
-void servo2_set_percentage(signed char percentage)
+void servoright_set_percentage(float percentage)
 {
 	if (percentage >= -100 && percentage <= 100)
 	{
-		OCR1B = RESET_VALUE+STOP_VALUE+(RANGE/100*percentage);
+		OCR1B = RESET_VALUE+STOP_VALUE+(RANGE/100.0*(percentage));
 	}
 }
 

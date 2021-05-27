@@ -2,14 +2,14 @@
 1620385122 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\fuse.c
 	<avr/io.h>
 
-1621498537 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\lib\servo.c
+1621757295 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\lib\servo.c
 	<avr/io.h>
 	<avr/interrupt.h>
 	"servo.h"
 
-1621497187 c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\lib\servo.h
+1621757295 c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\lib\servo.h
 
-1621498584 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\main.c
+1621757172 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\main.c
 	<avr/io.h>
 	"lib/servo.h"
 
