@@ -25,14 +25,14 @@ MPU6050 library by Nils Bebelaar
 
 typedef struct
 {
-    float x_acc;
-    float y_acc;
+    //float x_acc;
+    //float y_acc;
     float z_acc;
-    float x_err;
-    float y_err;
+    //float x_err;
+    //float y_err;
     float z_err;
-    float x_angle;
-    float y_angle;
+    //float x_angle;
+    //float y_angle;
     float z_angle;
     unsigned long lastTimestamp;
 } mpu_data_t;
@@ -42,3 +42,4 @@ void mpu_init(mpu_data_t *mpu_data);
 void mpu_get_gyro_raw(mpu_data_t *mpu_data);
 void mpu_get_gyro(mpu_data_t *mpu_data);
 void mpu_calc_error(mpu_data_t *mpu_data, int amount);
+void mpu_set_zero(mpu_data_t *mpu_data);
