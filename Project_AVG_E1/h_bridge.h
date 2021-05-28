@@ -15,13 +15,13 @@
 
 // The settings below are for the Mega, modify
 // in case you want to use other pins
-#define PORT_RPWM	PORTH
-#define PIN_RPWM	PH6
-#define DDR_RPWM	DDRH
+#define PORT_RPWM	PORTE
+#define PIN_RPWM	PE3
+#define DDR_RPWM	DDRE
 
-#define PORT_LPWM	PORTF
-#define PIN_LPWM	PF5
-#define DDR_LPWM	DDRF
+#define PORT_LPWM	PORTH
+#define PIN_LPWM	PH3
+#define DDR_LPWM	DDRH
 
 
 #define ENABLEDDR DDRB
