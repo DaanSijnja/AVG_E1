@@ -24,12 +24,12 @@
 #define DDR_LPWM	DDRH
 
 
-#define ENABLEDDR DDRB
-#define ENABLEPORT PORTB
-#define ENABLE_1_LEFT   PB0
-#define ENABLE_1_RIGHT  PB1
-#define ENABLE_2_LEFT   PB2
-#define ENABLE_2_RIGHT  PB3
+#define ENABLEDDR DDRC
+#define ENABLEPORT PORTC
+#define ENABLE_1_LEFT   PC0
+#define ENABLE_1_RIGHT  PC1
+#define ENABLE_2_LEFT   PC2
+#define ENABLE_2_RIGHT  PC3
 
 #define FORWARDS 1
 #define BACKWARDS 2
