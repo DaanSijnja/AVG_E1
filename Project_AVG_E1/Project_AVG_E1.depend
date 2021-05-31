@@ -1,0 +1,25 @@
+# depslib dependency file v1.0
+1620385122 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\fuse.c
+	<avr/io.h>
+
+1622469309 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\main.c
+	<avr/io.h>
+	<avr/interrupt.h>
+	"ultrasoon.h"
+	"servo.h"
+
+1622469071 c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\ultrasoon.h
+
+1622469180 c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\servo.h
+
+1622471356 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\servo.c
+	<avr/io.h>
+	<avr/interrupt.h>
+	"servo.h"
+
+1621264004 source:c:\users\daans\documents\codeblock code\avg_e1\project_avg_e1\ultrasoon.c
+	<avr/io.h>
+	<avr/interrupt.h>
+	<util/delay.h>
+	"ultrasoon.h"
+
