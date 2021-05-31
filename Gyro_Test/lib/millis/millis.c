@@ -4,11 +4,12 @@ Millisecs by Nils Bebelaar
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "millis.h"
 
 volatile unsigned long currentCount;
 
 //Setup milliseconds timer; increments currentCount variable every 1 ms
-void millisecs_init(void)
+void millis_init(void)
 {
   TCCR5A = 0;                                                          // turn on CTC mode
   TCCR5B = 0 | (1 << WGM52) | (0 << CS52) | (0 << CS51) | (1 << CS50); // Set CS02, CS01 and CS00 bits for 1 prescaler
@@ -19,7 +20,7 @@ void millisecs_init(void)
 }
 
 //Returns the current millisecs as unsigned long
-unsigned long millisecs(void)
+unsigned long millis(void)
 {
   return currentCount;
 }

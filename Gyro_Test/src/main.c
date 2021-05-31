@@ -1,35 +1,73 @@
 /*
-MPU6050 Gyro sensor test by Nils Bebelaar
-*/
+ * vl53l0xExample.c
+ *
+ *  Created on: July 3, 2017
+ *      Author: michael
+ *
+ *  Demonstrate the VL53I0X distance sensor.
+ * 
+ */
+#include <stdint.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include "debugPrint.h"
+#include "twi.h"
+#include "millis.h"
+#include "VL53L0X.h"
 
-#include "Gyrosensor.h"
-#include "uart.h"
-#include "millisecs.h"
-#include <util/delay.h>
+//--------------------------------------------------
+// Global Defines
+//--------------------------------------------------
+// GPIO
+#define PIN_I2C_SDA PD1
+#define PIN_I2C_SCL PD0
 
-int main(void)
+
+// Pseudo functions for Clearing, Setting and Testing bits
+#define SBI(reg, bit) (reg |= (1 << bit))
+#define CBI(reg, bit) (reg &= ~(1 << bit))
+#define IBI(reg, bit) ((reg & (1 << bit)) != 0)
+
+void init(void)
 {
-  mpu_data_t mpu_data;            //Create MPU6050 data type
-  millisecs_init();               //Initialize millisecs timer
-  uart_init(115200);              //Initialize uart for debugging to serial port
-  mpu_init(&mpu_data);            //Initialize MPU6050
-  mpu_calc_error(&mpu_data, 500); //Calculate MPU6050 error and  adjusts offsets
-  mpu_set_zero(&mpu_data);        //Set values to 0
-  tw_init(TW_FREQ_400K, true);    // set I2C Frequency, enable internal pull-up
+	debugInit();
+	//--------------------------------------------------
+	// GPIOs
+	//--------------------------------------------------
+	CBI(UCSR0B, RXEN0);		   // Disable UART RX
+	// Enable weak pullups on I2C lines
+	PORTD = (1 << PIN_I2C_SCL) | (1 << PIN_I2C_SDA);
+	//--------------------------------------------------
+	// Init the other modules
+	//--------------------------------------------------
+	i2c_init();
+	millis_init();
+	sei();
+}
 
-  int robotRotation = 0;
+int main()
+{
+	tof_data_t tof_data;
+	init();
 
-  while (1)
-  {
-    mpu_get_gyro(&mpu_data); //Get the rotational data
+	initVL53L0X(1);
+	// lower the return signal rate limit (default is 0.25 MCPS)
+	// setSignalRateLimit(0.1);
+	// increase laser pulse periods (defaults are 14 and 10 PCLKs)
+	// setVcselPulsePeriod(VcselPeriodPreRange, 18);
+	// setVcselPulsePeriod(VcselPeriodFinalRange, 14);
+	setMeasurementTimingBudget(500 * 1000UL); // integrate over 500 ms per measurement
 
-    robotRotation = (int)mpu_data.z_angle;
-
-    printf("%i", robotRotation); //Print data to uart
-    puts("");
-
-    unsigned long bookmark = millisecs();
-    while (millisecs() - bookmark < 2)
-      ;
-  }
+	// Main loop
+	while (1)
+	{
+		readRangeSingleMillimeters(&tof_data); // blocks until measurement is finished
+		debug_str("\nTOF: ");
+		debug_dec(tof_data.rawDistance);
+		if (timeoutOccurred())
+		{
+			debug_str(" !!! Timeout !!! \n");
+		}
+	}
+	return 0;
 }

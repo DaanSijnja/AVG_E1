@@ -13,6 +13,15 @@ VL53L0X datasheet.
 #ifndef VL53L0X_h
 #define VL53L0X_h
 
+#define TOF_GPIO_PORT PORTD
+#define TOF_GPIO_PIN PIND
+#define TOF_GPIO_DDR DDRD
+#define TOF_GPIO_PINNO PD3
+#define TOF_SHUT_PORT PORTD
+#define TOF_SHUT_PIN PIND
+#define TOF_SHUT_DDR DDRD
+#define TOF_SHUT_PINNO PD2
+
 
 //------------------------------------------------------------
 // For quick and dirty C++ compatibility
@@ -142,7 +151,7 @@ typedef struct{
   uint16_t ambientCnt;  //Ambient Counting Rate [mcps], uint16_t, fixpoint9.7
   uint16_t spadCnt;     //Effective SPAD return count,  uint16_t, fixpoint8.8
   uint8_t  rangeStatus; //Ranging status (0-15)
-} statInfo_t;
+} tof_data_t;
 
 
 //------------------------------------------------------------
@@ -203,11 +212,11 @@ void stopContinuous(void);
 
 // Returns a range reading in millimeters when continuous mode is active.
 // Additional measurement data will be copied into `extraStats` if it is non-zero.
-uint16_t readRangeContinuousMillimeters( statInfo_t *extraStats );
+uint16_t readRangeContinuousMillimeters( tof_data_t *extraStats );
 
 // Performs a single-shot ranging measurement and returns the reading in millimeters.
 // Additional measurement data will be copied into `extraStats` if it is non-zero.
-uint16_t readRangeSingleMillimeters( statInfo_t *extraStats );
+uint16_t readRangeSingleMillimeters( tof_data_t *extraStats );
 
 // Sets a timeout period in milliseconds after which read operations will abort 
 // if the sensor is not ready. A value of 0 disables the timeout.

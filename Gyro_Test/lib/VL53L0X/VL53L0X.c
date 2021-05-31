@@ -12,14 +12,14 @@ VL53L0X datasheet.
 
 #include <stdint.h>
 #include "twi.h"
-#include "millisecs.h"
+#include "millis.h"
 #include "VL53L0X.h"
 
 //---------------------------------------------------------
 // Local variables within this file (private)
 //---------------------------------------------------------
 uint8_t g_i2cAddr = ADDRESS_DEFAULT;
-uint16_t g_ioTimeout = 0; // no timeout
+uint16_t g_ioTimeout = 0;  // no timeout
 uint8_t g_isTimeout = 0;
 uint16_t g_timeoutStartMs;
 uint8_t g_stopVariable; // read by init and used when starting measurement; is StopVariable field of VL53L0X_DevData_t structure in API
@@ -29,8 +29,8 @@ uint32_t g_measTimBudUs;
 // Locally used functions (private)
 //---------------------------------------------------------
 bool getSpadInfo(uint8_t *count, bool *type_is_aperture);
-void getSequenceStepEnables(SequenceStepEnables *enables);
-void getSequenceStepTimeouts(SequenceStepEnables const *enables, SequenceStepTimeouts *timeouts);
+void getSequenceStepEnables(SequenceStepEnables * enables);
+void getSequenceStepTimeouts(SequenceStepEnables const * enables, SequenceStepTimeouts * timeouts);
 bool performSingleRefCalibration(uint8_t vhv_init_byte);
 static uint16_t decodeTimeout(uint16_t value);
 static uint16_t encodeTimeout(uint16_t timeout_mclks);
@@ -41,115 +41,107 @@ static uint32_t timeoutMicrosecondsToMclks(uint32_t timeout_period_us, uint8_t v
 // I2C communication Functions
 //---------------------------------------------------------
 // Write an 8-bit register
-void writeReg(uint8_t reg, uint8_t value)
-{
-  ret_code_t error_code;
-
-  error_code = tw_master_transmit(g_i2cAddr, reg, 1, true);
-  ERROR_CHECK(error_code);
-
-  error_code = tw_master_transmit(g_i2cAddr, value, 1, true);
-  ERROR_CHECK(error_code);
+void writeReg(uint8_t reg, uint8_t value) {
+  i2c_start( g_i2cAddr | I2C_WRITE );
+  i2c_write(reg);
+  i2c_write(value);
+  i2c_stop();
 }
 
 // Write a 16-bit register
-void writeReg16Bit(uint8_t reg, uint16_t value)
-{
-  ret_code_t error_code;
-  uint8_t data[2];
-
-  data[0] = ((value >> 8) & 0xFF);
-  data[1] = (value & 0xFF);
-
-  error_code = tw_master_transmit(g_i2cAddr, reg, 1, true);
-  ERROR_CHECK(error_code);
-
-  error_code = tw_master_transmit(g_i2cAddr, data, sizeof(data), true);
-  ERROR_CHECK(error_code);
+void writeReg16Bit(uint8_t reg, uint16_t value){
+  i2c_start( g_i2cAddr | I2C_WRITE );
+  i2c_write(reg);
+  i2c_write((value >> 8) & 0xFF);
+  i2c_write((value     ) & 0xFF);
+  i2c_stop();
 }
 
 // Write a 32-bit register
-void writeReg32Bit(uint8_t reg, uint32_t value)
-{
-  ret_code_t error_code;
-  uint8_t data[4];
-
-  data[0] = ((value >> 24) & 0xFF);
-  data[1] = ((value >> 16) & 0xFF);
-  data[2] = ((value >> 8) & 0xFF);
-  data[3] = (value & 0xFF);
-
-  error_code = tw_master_transmit(g_i2cAddr, reg, 1, true);
-  ERROR_CHECK(error_code);
-
-  error_code = tw_master_transmit(g_i2cAddr, data, sizeof(data), true);
-  ERROR_CHECK(error_code);
+void writeReg32Bit(uint8_t reg, uint32_t value){
+  i2c_start( g_i2cAddr | I2C_WRITE );
+  i2c_write(reg);
+  i2c_write((value >>24) & 0xFF);
+  i2c_write((value >>16) & 0xFF);
+  i2c_write((value >> 8) & 0xFF);
+  i2c_write((value     ) & 0xFF);
+  i2c_stop();
 }
 
 // Read an 8-bit register
-uint8_t readReg(uint8_t reg)
-{
-  ret_code_t error_code;
+uint8_t readReg(uint8_t reg) {
   uint8_t value;
-
-  error_code = tw_master_transmit(g_i2cAddr, reg, 1, true);
-  ERROR_CHECK(error_code);
-
-  error_code = tw_master_receive(g_i2cAddr, value, 1);
-  ERROR_CHECK(error_code);
+  i2c_start( g_i2cAddr | I2C_WRITE );
+  i2c_write( reg );
+  i2c_rep_start( g_i2cAddr | I2C_READ );
+  value = i2c_readNak();
+  i2c_stop();
   return value;
 }
 
 // Read a 16-bit register
-uint16_t readReg16Bit(uint8_t reg)
-{
-  ret_code_t error_code;
+uint16_t readReg16Bit(uint8_t reg) {
   uint16_t value;
-  uint8_t data[2];
-
-  error_code = tw_master_transmit(g_i2cAddr, reg, 1, true);
-  ERROR_CHECK(error_code);
-
-  error_code = tw_master_receive(g_i2cAddr, data, sizeof(data));
-  ERROR_CHECK(error_code);
-
-  value = (uint16_t)data[0] << 8;
-  value |= data[1];
-
+  i2c_start( g_i2cAddr | I2C_WRITE );
+  i2c_write( reg );
+  i2c_rep_start( g_i2cAddr | I2C_READ );
+  value  = i2c_readAck() << 8;
+  value |= i2c_readNak();
+  i2c_stop();
   return value;
 }
 
 // Read a 32-bit register
-uint32_t readReg32Bit(uint8_t reg)
-{
-  ret_code_t error_code;
-  uint16_t value;
-  uint8_t data[4];
-
-  error_code = tw_master_transmit(g_i2cAddr, reg, 1, true);
-  ERROR_CHECK(error_code);
-
-  error_code = tw_master_receive(g_i2cAddr, data, sizeof(data));
-  ERROR_CHECK(error_code);
-
-  value = (uint32_t)data[0] << 24;
-  value = (uint32_t)data[1] << 16;
-  value = (uint16_t)data[2] << 8;
-  value |= data[3];
-
+uint32_t readReg32Bit(uint8_t reg) {
+  uint32_t value;
+  i2c_start( g_i2cAddr | I2C_WRITE );
+  i2c_write( reg );
+  i2c_rep_start( g_i2cAddr | I2C_READ );
+  value  = (uint32_t)i2c_readAck() <<24;
+  value |= (uint32_t)i2c_readAck() <<16;
+  value |= (uint32_t)i2c_readAck() << 8;
+  value |= i2c_readNak();
+  i2c_stop();
   return value;
 }
 
+// Write an arbitrary number of bytes from the given array to the sensor,
+// starting at the given register
+void writeMulti(uint8_t reg, uint8_t const *src, uint8_t count){
+  i2c_start( g_i2cAddr | I2C_WRITE );
+  i2c_write( reg );
+  while ( count-- > 0 ) {
+    i2c_write( *src++ );
+  }
+  i2c_stop();
+}
+
+// Read an arbitrary number of bytes from the sensor, starting at the given
+// register, into the given array
+void readMulti(uint8_t reg, uint8_t * dst, uint8_t count) {
+  i2c_start( g_i2cAddr | I2C_WRITE );
+  i2c_write( reg );
+  i2c_rep_start( g_i2cAddr | I2C_READ );
+  while ( count > 0 ) {
+    if ( count > 1 ){
+      *dst++ = i2c_readAck();
+    } else {
+      *dst++ = i2c_readNak();
+    }
+    count--;
+  }
+  i2c_stop();
+}
+
+
 // Public Methods //////////////////////////////////////////////////////////////
 
-void setAddress(uint8_t new_addr)
-{
-  writeReg(I2C_SLAVE_DEVICE_ADDRESS, (new_addr >> 1) & 0x7F);
+void setAddress(uint8_t new_addr) {
+  writeReg( I2C_SLAVE_DEVICE_ADDRESS, (new_addr>>1) & 0x7F );
   g_i2cAddr = new_addr;
 }
 
-uint8_t getAddress()
-{
+uint8_t getAddress() {
   return g_i2cAddr;
 }
 
@@ -161,15 +153,14 @@ uint8_t getAddress()
 // enough unless a cover glass is added.
 // If io_2v8 (optional) is true or not given, the sensor is configured for 2V8
 // mode.
-bool initVL53L0X(bool io_2v8)
-{
+bool initVL53L0X( bool io_2v8 ){
   // VL53L0X_DataInit() begin
 
   // sensor uses 1V8 mode for I/O by default; switch to 2V8 mode if necessary
   if (io_2v8)
   {
     writeReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV,
-             readReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV) | 0x01); // set bit 0
+      readReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV) | 0x01); // set bit 0
   }
 
   // "Set I2C standard mode"
@@ -197,23 +188,13 @@ bool initVL53L0X(bool io_2v8)
 
   uint8_t spad_count;
   bool spad_type_is_aperture;
-  if (!getSpadInfo(&spad_count, &spad_type_is_aperture))
-  {
-    return false;
-  }
+  if (!getSpadInfo(&spad_count, &spad_type_is_aperture)) { return false; }
 
   // The SPAD map (RefGoodSpadMap) is read by VL53L0X_get_info_from_device() in
   // the API, but the same data seems to be more easily readable from
   // GLOBAL_CONFIG_SPAD_ENABLES_REF_0 through _6, so read it from there
-  ret_code_t error_code;
   uint8_t ref_spad_map[6];
-
-  error_code = tw_master_transmit(g_i2cAddr, GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 1, true);
-  ERROR_CHECK(error_code);
-
-  //Get all the data of 6 registers
-  error_code = tw_master_receive(g_i2cAddr, ref_spad_map, sizeof(ref_spad_map));
-  ERROR_CHECK(error_code);
+  readMulti(GLOBAL_CONFIG_SPAD_ENABLES_REF_0, ref_spad_map, 6);
 
   // -- VL53L0X_set_reference_spads() begin (assume NVM values are valid)
 
@@ -240,14 +221,7 @@ bool initVL53L0X(bool io_2v8)
     }
   }
 
-  ret_code_t error_code;
-
-  error_code = tw_master_transmit(g_i2cAddr, GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 1, true);
-  ERROR_CHECK(error_code);
-
-  //Write all the data of 6 registers
-  error_code = tw_master_transmit(g_i2cAddr, ref_spad_map, sizeof(ref_spad_map), true);
-  ERROR_CHECK(error_code);
+  writeMulti(GLOBAL_CONFIG_SPAD_ENABLES_REF_0, ref_spad_map, 6);
 
   // -- VL53L0X_set_reference_spads() end
 
@@ -380,20 +354,14 @@ bool initVL53L0X(bool io_2v8)
   // -- VL53L0X_perform_vhv_calibration() begin
 
   writeReg(SYSTEM_SEQUENCE_CONFIG, 0x01);
-  if (!performSingleRefCalibration(0x40))
-  {
-    return false;
-  }
+  if (!performSingleRefCalibration(0x40)) { return false; }
 
   // -- VL53L0X_perform_vhv_calibration() end
 
   // -- VL53L0X_perform_phase_calibration() begin
 
   writeReg(SYSTEM_SEQUENCE_CONFIG, 0x02);
-  if (!performSingleRefCalibration(0x00))
-  {
-    return false;
-  }
+  if (!performSingleRefCalibration(0x00)) { return false; }
 
   // -- VL53L0X_perform_phase_calibration() end
 
@@ -415,10 +383,7 @@ bool initVL53L0X(bool io_2v8)
 // Defaults to 0.25 MCPS as initialized by the ST API and this library.
 bool setSignalRateLimit(float limit_Mcps)
 {
-  if (limit_Mcps < 0 || limit_Mcps > 511.99)
-  {
-    return false;
-  }
+  if (limit_Mcps < 0 || limit_Mcps > 511.99) { return false; }
 
   // Q9.7 fixed point format (9 integer bits, 7 fractional bits)
   writeReg16Bit(FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT, limit_Mcps * (1 << 7));
@@ -443,20 +408,17 @@ bool setMeasurementTimingBudget(uint32_t budget_us)
   SequenceStepEnables enables;
   SequenceStepTimeouts timeouts;
 
-  uint16_t const StartOverhead = 1320; // note that this is different than the value in get_
-  uint16_t const EndOverhead = 960;
-  uint16_t const MsrcOverhead = 660;
-  uint16_t const TccOverhead = 590;
-  uint16_t const DssOverhead = 690;
-  uint16_t const PreRangeOverhead = 660;
+  uint16_t const StartOverhead      = 1320; // note that this is different than the value in get_
+  uint16_t const EndOverhead        = 960;
+  uint16_t const MsrcOverhead       = 660;
+  uint16_t const TccOverhead        = 590;
+  uint16_t const DssOverhead        = 690;
+  uint16_t const PreRangeOverhead   = 660;
   uint16_t const FinalRangeOverhead = 550;
 
   uint32_t const MinTimingBudget = 20000;
 
-  if (budget_us < MinTimingBudget)
-  {
-    return false;
-  }
+  if (budget_us < MinTimingBudget) { return false; }
 
   uint32_t used_budget_us = StartOverhead + EndOverhead;
 
@@ -509,8 +471,8 @@ bool setMeasurementTimingBudget(uint32_t budget_us)
     //  because they have different vcsel periods."
 
     uint16_t final_range_timeout_mclks =
-        timeoutMicrosecondsToMclks(final_range_timeout_us,
-                                   timeouts.final_range_vcsel_period_pclks);
+      timeoutMicrosecondsToMclks(final_range_timeout_us,
+                                 timeouts.final_range_vcsel_period_pclks);
 
     if (enables.pre_range)
     {
@@ -518,7 +480,7 @@ bool setMeasurementTimingBudget(uint32_t budget_us)
     }
 
     writeReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI,
-                  encodeTimeout(final_range_timeout_mclks));
+      encodeTimeout(final_range_timeout_mclks));
 
     // set_sequence_step_timeout() end
 
@@ -535,12 +497,12 @@ uint32_t getMeasurementTimingBudget(void)
   SequenceStepEnables enables;
   SequenceStepTimeouts timeouts;
 
-  uint16_t const StartOverhead = 1910; // note that this is different than the value in set_
-  uint16_t const EndOverhead = 960;
-  uint16_t const MsrcOverhead = 660;
-  uint16_t const TccOverhead = 590;
-  uint16_t const DssOverhead = 690;
-  uint16_t const PreRangeOverhead = 660;
+  uint16_t const StartOverhead     = 1910; // note that this is different than the value in set_
+  uint16_t const EndOverhead        = 960;
+  uint16_t const MsrcOverhead       = 660;
+  uint16_t const TccOverhead        = 590;
+  uint16_t const DssOverhead        = 690;
+  uint16_t const PreRangeOverhead   = 660;
   uint16_t const FinalRangeOverhead = 550;
 
   // "Start and end overhead times always present"
@@ -606,30 +568,31 @@ bool setVcselPulsePeriod(vcselPeriodType type, uint8_t period_pclks)
   // For the MSRC timeout, the same applies - this timeout being
   // dependant on the pre-range vcsel period."
 
+
   if (type == VcselPeriodPreRange)
   {
     // "Set phase check limits"
     switch (period_pclks)
     {
-    case 12:
-      writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x18);
-      break;
+      case 12:
+        writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x18);
+        break;
 
-    case 14:
-      writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x30);
-      break;
+      case 14:
+        writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x30);
+        break;
 
-    case 16:
-      writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x40);
-      break;
+      case 16:
+        writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x40);
+        break;
 
-    case 18:
-      writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x50);
-      break;
+      case 18:
+        writeReg(PRE_RANGE_CONFIG_VALID_PHASE_HIGH, 0x50);
+        break;
 
-    default:
-      // invalid period
-      return false;
+      default:
+        // invalid period
+        return false;
     }
     writeReg(PRE_RANGE_CONFIG_VALID_PHASE_LOW, 0x08);
 
@@ -642,10 +605,10 @@ bool setVcselPulsePeriod(vcselPeriodType type, uint8_t period_pclks)
     // (SequenceStepId == VL53L0X_SEQUENCESTEP_PRE_RANGE)
 
     uint16_t new_pre_range_timeout_mclks =
-        timeoutMicrosecondsToMclks(timeouts.pre_range_us, period_pclks);
+      timeoutMicrosecondsToMclks(timeouts.pre_range_us, period_pclks);
 
     writeReg16Bit(PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI,
-                  encodeTimeout(new_pre_range_timeout_mclks));
+      encodeTimeout(new_pre_range_timeout_mclks));
 
     // set_sequence_step_timeout() end
 
@@ -653,10 +616,10 @@ bool setVcselPulsePeriod(vcselPeriodType type, uint8_t period_pclks)
     // (SequenceStepId == VL53L0X_SEQUENCESTEP_MSRC)
 
     uint16_t new_msrc_timeout_mclks =
-        timeoutMicrosecondsToMclks(timeouts.msrc_dss_tcc_us, period_pclks);
+      timeoutMicrosecondsToMclks(timeouts.msrc_dss_tcc_us, period_pclks);
 
     writeReg(MSRC_CONFIG_TIMEOUT_MACROP,
-             (new_msrc_timeout_mclks > 256) ? 255 : (new_msrc_timeout_mclks - 1));
+      (new_msrc_timeout_mclks > 256) ? 255 : (new_msrc_timeout_mclks - 1));
 
     // set_sequence_step_timeout() end
   }
@@ -664,49 +627,49 @@ bool setVcselPulsePeriod(vcselPeriodType type, uint8_t period_pclks)
   {
     switch (period_pclks)
     {
-    case 8:
-      writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x10);
-      writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08);
-      writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x02);
-      writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x0C);
-      writeReg(0xFF, 0x01);
-      writeReg(ALGO_PHASECAL_LIM, 0x30);
-      writeReg(0xFF, 0x00);
-      break;
+      case 8:
+        writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x10);
+        writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW,  0x08);
+        writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x02);
+        writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x0C);
+        writeReg(0xFF, 0x01);
+        writeReg(ALGO_PHASECAL_LIM, 0x30);
+        writeReg(0xFF, 0x00);
+        break;
 
-    case 10:
-      writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x28);
-      writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08);
-      writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03);
-      writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x09);
-      writeReg(0xFF, 0x01);
-      writeReg(ALGO_PHASECAL_LIM, 0x20);
-      writeReg(0xFF, 0x00);
-      break;
+      case 10:
+        writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x28);
+        writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW,  0x08);
+        writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03);
+        writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x09);
+        writeReg(0xFF, 0x01);
+        writeReg(ALGO_PHASECAL_LIM, 0x20);
+        writeReg(0xFF, 0x00);
+        break;
 
-    case 12:
-      writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x38);
-      writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08);
-      writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03);
-      writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x08);
-      writeReg(0xFF, 0x01);
-      writeReg(ALGO_PHASECAL_LIM, 0x20);
-      writeReg(0xFF, 0x00);
-      break;
+      case 12:
+        writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x38);
+        writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW,  0x08);
+        writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03);
+        writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x08);
+        writeReg(0xFF, 0x01);
+        writeReg(ALGO_PHASECAL_LIM, 0x20);
+        writeReg(0xFF, 0x00);
+        break;
 
-    case 14:
-      writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x48);
-      writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW, 0x08);
-      writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03);
-      writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x07);
-      writeReg(0xFF, 0x01);
-      writeReg(ALGO_PHASECAL_LIM, 0x20);
-      writeReg(0xFF, 0x00);
-      break;
+      case 14:
+        writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_HIGH, 0x48);
+        writeReg(FINAL_RANGE_CONFIG_VALID_PHASE_LOW,  0x08);
+        writeReg(GLOBAL_CONFIG_VCSEL_WIDTH, 0x03);
+        writeReg(ALGO_PHASECAL_CONFIG_TIMEOUT, 0x07);
+        writeReg(0xFF, 0x01);
+        writeReg(ALGO_PHASECAL_LIM, 0x20);
+        writeReg(0xFF, 0x00);
+        break;
 
-    default:
-      // invalid period
-      return false;
+      default:
+        // invalid period
+        return false;
     }
 
     // apply new VCSEL period
@@ -723,7 +686,7 @@ bool setVcselPulsePeriod(vcselPeriodType type, uint8_t period_pclks)
     //  because they have different vcsel periods."
 
     uint16_t new_final_range_timeout_mclks =
-        timeoutMicrosecondsToMclks(timeouts.final_range_us, period_pclks);
+      timeoutMicrosecondsToMclks(timeouts.final_range_us, period_pclks);
 
     if (enables.pre_range)
     {
@@ -731,7 +694,7 @@ bool setVcselPulsePeriod(vcselPeriodType type, uint8_t period_pclks)
     }
 
     writeReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI,
-                  encodeTimeout(new_final_range_timeout_mclks));
+      encodeTimeout(new_final_range_timeout_mclks));
 
     // set_sequence_step_timeout end
   }
@@ -770,10 +733,7 @@ uint8_t getVcselPulsePeriod(vcselPeriodType type)
   {
     return decodeVcselPeriod(readReg(FINAL_RANGE_CONFIG_VCSEL_PERIOD));
   }
-  else
-  {
-    return 255;
-  }
+  else { return 255; }
 }
 
 // Start continuous ranging measurements. If period_ms (optional) is 0 or not
@@ -835,27 +795,22 @@ void stopContinuous(void)
 // (readRangeSingleMillimeters() also calls this function after starting a
 // single-shot range measurement)
 // extraStats provides additional info for this measurment. Set to 0 if not needed.
-uint16_t readRangeContinuousMillimeters(statInfo_t *extraStats)
-{
+uint16_t readRangeContinuousMillimeters( tof_data_t *extraStats ) {
   uint8_t tempBuffer[12];
   uint16_t temp;
   startTimeout();
-  while ((readReg(RESULT_INTERRUPT_STATUS) & 0x07) == 0)
-  {
+  while ((readReg(RESULT_INTERRUPT_STATUS) & 0x07) == 0) {
     if (checkTimeoutExpired())
     {
       g_isTimeout = true;
       return 65535;
     }
   }
-  if (extraStats == 0)
-  {
+  if( extraStats == 0 ){
     // assumptions: Linearity Corrective Gain is 1000 (default);
     // fractional ranging is not enabled
     temp = readReg16Bit(RESULT_RANGE_STATUS + 10);
-  }
-  else
-  {
+  } else {
     // Register map starting at 0x14
     //     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
     //    5A 06 BC 04 00 85 00 38 00 19 06 B6 00 00 00 00
@@ -867,20 +822,12 @@ uint16_t readRangeContinuousMillimeters(statInfo_t *extraStats)
     // 6,7: signal count rate [mcps], uint16_t, fixpoint9.7
     // 9,8: AmbientRateRtnMegaCps  [mcps], uint16_t, fixpoimt9.7
     // A,B: uncorrected distance [mm], uint16_t
-    ret_code_t error_code;
-
-    error_code = tw_master_transmit(g_i2cAddr, GLOBAL_CONFIG_SPAD_ENABLES_REF_0, 1, true);
-    ERROR_CHECK(error_code);
-
-    //Get all the data of 12 registers
-    error_code = tw_master_receive(g_i2cAddr, tempBuffer, sizeof(tempBuffer));
-    ERROR_CHECK(error_code);
-
-    extraStats->rangeStatus = tempBuffer[0x00] >> 3;
-    extraStats->spadCnt = (tempBuffer[0x02] << 8) | tempBuffer[0x03];
-    extraStats->signalCnt = (tempBuffer[0x06] << 8) | tempBuffer[0x07];
-    extraStats->ambientCnt = (tempBuffer[0x08] << 8) | tempBuffer[0x09];
-    temp = (tempBuffer[0x0A] << 8) | tempBuffer[0x0B];
+    readMulti(0x14, tempBuffer, 12);
+    extraStats->rangeStatus =  tempBuffer[0x00]>>3;
+    extraStats->spadCnt     = (tempBuffer[0x02]<<8) | tempBuffer[0x03];
+    extraStats->signalCnt   = (tempBuffer[0x06]<<8) | tempBuffer[0x07];
+    extraStats->ambientCnt  = (tempBuffer[0x08]<<8) | tempBuffer[0x09];    
+    temp                    = (tempBuffer[0x0A]<<8) | tempBuffer[0x0B];
     extraStats->rawDistance = temp;
   }
   writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01);
@@ -891,8 +838,7 @@ uint16_t readRangeContinuousMillimeters(statInfo_t *extraStats)
 // millimeters
 // based on VL53L0X_PerformSingleRangingMeasurement()
 // extraStats provides additional info for this measurment. Set to 0 if not needed.
-uint16_t readRangeSingleMillimeters(statInfo_t *extraStats)
-{
+uint16_t readRangeSingleMillimeters( tof_data_t *extraStats ) {
   writeReg(0x80, 0x01);
   writeReg(0xFF, 0x01);
   writeReg(0x00, 0x00);
@@ -903,15 +849,13 @@ uint16_t readRangeSingleMillimeters(statInfo_t *extraStats)
   writeReg(SYSRANGE_START, 0x01);
   // "Wait until start bit has been cleared"
   startTimeout();
-  while (readReg(SYSRANGE_START) & 0x01)
-  {
-    if (checkTimeoutExpired())
-    {
+  while (readReg(SYSRANGE_START) & 0x01){
+    if (checkTimeoutExpired()){
       g_isTimeout = true;
       return 65535;
     }
   }
-  return readRangeContinuousMillimeters(extraStats);
+  return readRangeContinuousMillimeters( extraStats );
 }
 
 // Did a timeout occur in one of the read functions since the last call to
@@ -923,13 +867,11 @@ bool timeoutOccurred()
   return tmp;
 }
 
-void setTimeout(uint16_t timeout)
-{
+void setTimeout(uint16_t timeout){
   g_ioTimeout = timeout;
 }
 
-uint16_t getTimeout(void)
-{
+uint16_t getTimeout(void){
   return g_ioTimeout;
 }
 
@@ -938,7 +880,7 @@ uint16_t getTimeout(void)
 // Get reference SPAD (single photon avalanche diode) count and type
 // based on VL53L0X_get_info_from_device(),
 // but only gets reference SPAD count and type
-bool getSpadInfo(uint8_t *count, bool *type_is_aperture)
+bool getSpadInfo(uint8_t * count, bool * type_is_aperture)
 {
   uint8_t tmp;
 
@@ -958,10 +900,7 @@ bool getSpadInfo(uint8_t *count, bool *type_is_aperture)
   startTimeout();
   while (readReg(0x83) == 0x00)
   {
-    if (checkTimeoutExpired())
-    {
-      return false;
-    }
+    if (checkTimeoutExpired()) { return false; }
   }
   writeReg(0x83, 0x01);
   tmp = readReg(0x92);
@@ -971,7 +910,7 @@ bool getSpadInfo(uint8_t *count, bool *type_is_aperture)
 
   writeReg(0x81, 0x00);
   writeReg(0xFF, 0x06);
-  writeReg(0x83, readReg(0x83) & ~0x04);
+  writeReg(0x83, readReg(0x83)  & ~0x04);
   writeReg(0xFF, 0x01);
   writeReg(0x00, 0x01);
 
@@ -983,40 +922,40 @@ bool getSpadInfo(uint8_t *count, bool *type_is_aperture)
 
 // Get sequence step enables
 // based on VL53L0X_GetSequenceStepEnables()
-void getSequenceStepEnables(SequenceStepEnables *enables)
+void getSequenceStepEnables(SequenceStepEnables * enables)
 {
   uint8_t sequence_config = readReg(SYSTEM_SEQUENCE_CONFIG);
 
-  enables->tcc = (sequence_config >> 4) & 0x1;
-  enables->dss = (sequence_config >> 3) & 0x1;
-  enables->msrc = (sequence_config >> 2) & 0x1;
-  enables->pre_range = (sequence_config >> 6) & 0x1;
-  enables->final_range = (sequence_config >> 7) & 0x1;
+  enables->tcc          = (sequence_config >> 4) & 0x1;
+  enables->dss          = (sequence_config >> 3) & 0x1;
+  enables->msrc         = (sequence_config >> 2) & 0x1;
+  enables->pre_range    = (sequence_config >> 6) & 0x1;
+  enables->final_range  = (sequence_config >> 7) & 0x1;
 }
 
 // Get sequence step timeouts
 // based on get_sequence_step_timeout(),
 // but gets all timeouts instead of just the requested one, and also stores
 // intermediate values
-void getSequenceStepTimeouts(SequenceStepEnables const *enables, SequenceStepTimeouts *timeouts)
+void getSequenceStepTimeouts(SequenceStepEnables const * enables, SequenceStepTimeouts * timeouts)
 {
   timeouts->pre_range_vcsel_period_pclks = getVcselPulsePeriod(VcselPeriodPreRange);
 
   timeouts->msrc_dss_tcc_mclks = readReg(MSRC_CONFIG_TIMEOUT_MACROP) + 1;
   timeouts->msrc_dss_tcc_us =
-      timeoutMclksToMicroseconds(timeouts->msrc_dss_tcc_mclks,
-                                 timeouts->pre_range_vcsel_period_pclks);
+    timeoutMclksToMicroseconds(timeouts->msrc_dss_tcc_mclks,
+                               timeouts->pre_range_vcsel_period_pclks);
 
   timeouts->pre_range_mclks =
-      decodeTimeout(readReg16Bit(PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI));
+    decodeTimeout(readReg16Bit(PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI));
   timeouts->pre_range_us =
-      timeoutMclksToMicroseconds(timeouts->pre_range_mclks,
-                                 timeouts->pre_range_vcsel_period_pclks);
+    timeoutMclksToMicroseconds(timeouts->pre_range_mclks,
+                               timeouts->pre_range_vcsel_period_pclks);
 
   timeouts->final_range_vcsel_period_pclks = getVcselPulsePeriod(VcselPeriodFinalRange);
 
   timeouts->final_range_mclks =
-      decodeTimeout(readReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI));
+    decodeTimeout(readReg16Bit(FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI));
 
   if (enables->pre_range)
   {
@@ -1024,8 +963,8 @@ void getSequenceStepTimeouts(SequenceStepEnables const *enables, SequenceStepTim
   }
 
   timeouts->final_range_us =
-      timeoutMclksToMicroseconds(timeouts->final_range_mclks,
-                                 timeouts->final_range_vcsel_period_pclks);
+    timeoutMclksToMicroseconds(timeouts->final_range_mclks,
+                               timeouts->final_range_vcsel_period_pclks);
 }
 
 // Decode sequence step timeout in MCLKs from register value
@@ -1035,7 +974,8 @@ void getSequenceStepTimeouts(SequenceStepEnables const *enables, SequenceStepTim
 uint16_t decodeTimeout(uint16_t reg_val)
 {
   // format: "(LSByte * 2^MSByte) + 1"
-  return (uint16_t)((reg_val & 0x00FF) << (uint16_t)((reg_val & 0xFF00) >> 8)) + 1;
+  return (uint16_t)((reg_val & 0x00FF) <<
+         (uint16_t)((reg_val & 0xFF00) >> 8)) + 1;
 }
 
 // Encode sequence step timeout register value from timeout in MCLKs
@@ -1061,10 +1001,7 @@ uint16_t encodeTimeout(uint16_t timeout_mclks)
 
     return (ms_byte << 8) | (ls_byte & 0xFF);
   }
-  else
-  {
-    return 0;
-  }
+  else { return 0; }
 }
 
 // Convert sequence step timeout from MCLKs to microseconds with given VCSEL period in PCLKs
@@ -1085,6 +1022,7 @@ uint32_t timeoutMicrosecondsToMclks(uint32_t timeout_period_us, uint8_t vcsel_pe
   return (((timeout_period_us * 1000) + (macro_period_ns / 2)) / macro_period_ns);
 }
 
+
 // based on VL53L0X_perform_single_ref_calibration()
 bool performSingleRefCalibration(uint8_t vhv_init_byte)
 {
@@ -1093,10 +1031,7 @@ bool performSingleRefCalibration(uint8_t vhv_init_byte)
   startTimeout();
   while ((readReg(RESULT_INTERRUPT_STATUS) & 0x07) == 0)
   {
-    if (checkTimeoutExpired())
-    {
-      return false;
-    }
+    if (checkTimeoutExpired()) { return false; }
   }
 
   writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01);
