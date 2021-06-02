@@ -152,6 +152,7 @@ typedef enum
 typedef struct
 {
   uint16_t rawDistance; //uncorrected distance  [mm],   uint16_t
+  uint16_t distance;
   uint16_t signalCnt;   //Signal  Counting Rate [mcps], uint16_t, fixpoint9.7
   uint16_t ambientCnt;  //Ambient Counting Rate [mcps], uint16_t, fixpoint9.7
   uint16_t spadCnt;     //Effective SPAD return count,  uint16_t, fixpoint8.8

@@ -33,12 +33,27 @@ void init(void)
 
 	//----- Setup VL53L0X Time of Flight Distance Sensor -----
 	initVL53L0X(1);
-	// lower the return signal rate limit (default is 0.25 MCPS)
-	// setSignalRateLimit(0.1);
-	// increase laser pulse periods (defaults are 14 and 10 PCLKs)
-	// setVcselPulsePeriod(VcselPeriodPreRange, 18);
-	// setVcselPulsePeriod(VcselPeriodFinalRange, 14);
-	setMeasurementTimingBudget(33 * 1000UL); // integrate over 20 ms per measurement
+	writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04); //Turn on GPIO interupt, the sensor will pull GPIO to LOW when data is ready
+	setMeasurementTimingBudget(33 * 1000UL);	  //Give the sensor 33ms to measure, 'Default mode' according to VL53L0X Datasheet
+	startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
+}
+
+//Read TOF sensor data and write to distance variable
+void getTOFData(void)
+{
+	if (!TestBit(PIND, PD3))
+	{
+		int reading;
+		reading = readReg16Bit(RESULT_RANGE_STATUS + 10); //Read data from sensor if GPIO is LOW
+		writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01);			  //Reset GPIO status
+
+		if ((reading < 700) && (reading > 0))
+			tof_data.distance = reading;
+	}
+	if (timeoutOccurred())
+	{
+		debug_str(" !!! Timeout !!! \n");
+	}
 }
 
 int main()
@@ -53,13 +68,10 @@ int main()
 		debug_str("\nROT: ");
 		debug_dec((int)mpu_data.z_angle + 360);
 
-		readRangeSingleMillimeters(&tof_data); // blocks until measurement is finished
+		getTOFData();
+
 		debug_str("\tTOF: ");
-		debug_dec(tof_data.rawDistance);
-		if (timeoutOccurred())
-		{
-			debug_str(" !!! Timeout !!! \n");
-		}
+		debug_dec(tof_data.distance);
 	}
 	return 0;
 }
