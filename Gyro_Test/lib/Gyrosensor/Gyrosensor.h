@@ -3,8 +3,7 @@ MPU6050 library by Nils Bebelaar
 */
 
 #include "twi.h"
-#include "millisecs.h"
-#include "uart.h"
+#include "millis.h"
 
 #define MPU6050_ADDR 0x68
 
@@ -37,7 +36,6 @@ typedef struct
     unsigned long lastTimestamp;
 } mpu_data_t;
 
-void ERROR_CHECK(ret_code_t error_code);
 void mpu_init(mpu_data_t *mpu_data);
 void mpu_get_gyro_raw(mpu_data_t *mpu_data);
 void mpu_get_gyro(mpu_data_t *mpu_data);

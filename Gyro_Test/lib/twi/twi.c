@@ -11,111 +11,123 @@
 #include "debugPrint.h"
 #include "twi.h"
 
-
 /*************************************************************************
  Initialization of the I2C bus interface. Need to be called only once
 *************************************************************************/
-void i2c_init(void){
-  /* initialize TWI clock: 100 kHz clock, TWPS = 0 => prescaler = 1 */
-  TWSR = 0;                         /* no prescaler */
-  TWBR = ((F_CPU/SCL_CLOCK)-16)/2;  /* must be > 10 for stable operation */
-}/* i2c_init */
-
+void i2c_init(void)
+{
+	/* initialize TWI clock: 100 kHz clock, TWPS = 0 => prescaler = 1 */
+	TWSR = 0;							   /* no prescaler */
+	TWBR = ((F_CPU / SCL_CLOCK) - 16) / 2; /* must be > 10 for stable operation */
+} /* i2c_init */
 
 /*************************************************************************	
   Issues a start condition and sends address and transfer direction.
   return 0 = device accessible, 1= failed to access device
 *************************************************************************/
-unsigned char i2c_start(unsigned char address){
-    uint8_t   twst;
-    uint16_t timeout=0xFFFF;
+unsigned char i2c_start(unsigned char address)
+{
+	uint8_t twst;
+	uint16_t timeout = 0xFFFF;
 
 	// send START condition
-	TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);
+	TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);
 
 	// wait until  START condition has been transmitted
-    while( --timeout > 0 ){
-        if( TWCR & (1<<TWINT) ){
-            break;
-        }
-    }
-    if( timeout == 0 ){
-        debug_str("i2c_start(): timeout\n");
-        return 1;
-    }
-    timeout=0xFFFF;
+	while (--timeout > 0)
+	{
+		if (TWCR & (1 << TWINT))
+		{
+			break;
+		}
+	}
+	if (timeout == 0)
+	{
+		debug_str("i2c_start(): timeout\n");
+		return 1;
+	}
+	timeout = 0xFFFF;
 
 	// check value of TWI Status Register. Mask prescaler bits.
 	twst = TW_STATUS & 0xF8;
-	if ( (twst != TW_START) && (twst != TW_REP_START)) return 1;
+	if ((twst != TW_START) && (twst != TW_REP_START))
+		return 1;
 
 	// send device address
 	TWDR = address;
-	TWCR = (1<<TWINT) | (1<<TWEN);
+	TWCR = (1 << TWINT) | (1 << TWEN);
 
 	// wail until transmission completed and ACK/NACK has been received
-    while( --timeout > 0 ){
-        if( TWCR & (1<<TWINT) ){
-            break;
-        }
-    }
-    if( timeout == 0 ){
-        debug_str("i2c_start(): timeout\n");
-        return 1;
-    }
+	while (--timeout > 0)
+	{
+		if (TWCR & (1 << TWINT))
+		{
+			break;
+		}
+	}
+	if (timeout == 0)
+	{
+		debug_str("i2c_start(): timeout\n");
+		return 1;
+	}
 	// check value of TWI Status Register. Mask prescaler bits.
 	twst = TW_STATUS & 0xF8;
-	if ( (twst != TW_MT_SLA_ACK) && (twst != TW_MR_SLA_ACK) ){
-//		debug_str("\ni2c_start(): !!! com error !!!\n");
+	if ((twst != TW_MT_SLA_ACK) && (twst != TW_MR_SLA_ACK))
+	{
+		//debug_str("\ni2c_start(): !!! com error !!!\n");
 		return 1;
 	}
 	return 0;
-}/* i2c_start */
-
+} /* i2c_start */
 
 /*************************************************************************
  Issues a start condition and sends address and transfer direction.
  If device is busy, use ack polling to wait until device is ready
  Input:   address and transfer direction of I2C device
 *************************************************************************/
-void i2c_start_wait(unsigned char address){
-    uint8_t   twst;
-    while ( 1 ) {
-	    // send START condition
-	    TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);
-    
-    	// wait until transmission completed
-    	while(!(TWCR & (1<<TWINT)));
-    
-    	// check value of TWI Status Register. Mask prescaler bits.
-    	twst = TW_STATUS & 0xF8;
-    	if ( (twst != TW_START) && (twst != TW_REP_START)) continue;
-    
-    	// send device address
-    	TWDR = address;
-    	TWCR = (1<<TWINT) | (1<<TWEN);
-    
-    	// wail until transmission completed
-    	while(!(TWCR & (1<<TWINT)));
-    
-    	// check value of TWI Status Register. Mask prescaler bits.
-    	twst = TW_STATUS & 0xF8;
-    	if ( (twst == TW_MT_SLA_NACK )||(twst ==TW_MR_DATA_NACK) ) 
-    	{    	    
-    	    /* device busy, send stop condition to terminate write operation */
-	        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
-	        
-	        // wait until stop condition is executed and bus released
-	        while(TWCR & (1<<TWSTO));
-	        
-    	    continue;
-    	}
-    	//if( twst != TW_MT_SLA_ACK) return 1;
-    	break;
-     }
+void i2c_start_wait(unsigned char address)
+{
+	uint8_t twst;
+	while (1)
+	{
+		// send START condition
+		TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);
 
-}/* i2c_start_wait */
+		// wait until transmission completed
+		while (!(TWCR & (1 << TWINT)))
+			;
 
+		// check value of TWI Status Register. Mask prescaler bits.
+		twst = TW_STATUS & 0xF8;
+		if ((twst != TW_START) && (twst != TW_REP_START))
+			continue;
+
+		// send device address
+		TWDR = address;
+		TWCR = (1 << TWINT) | (1 << TWEN);
+
+		// wail until transmission completed
+		while (!(TWCR & (1 << TWINT)))
+			;
+
+		// check value of TWI Status Register. Mask prescaler bits.
+		twst = TW_STATUS & 0xF8;
+		if ((twst == TW_MT_SLA_NACK) || (twst == TW_MR_DATA_NACK))
+		{
+			/* device busy, send stop condition to terminate write operation */
+			TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
+
+			// wait until stop condition is executed and bus released
+			while (TWCR & (1 << TWSTO))
+				;
+
+			continue;
+		}
+		//if( twst != TW_MT_SLA_ACK) return 1;
+		break;
+	}
+
+} /* i2c_start_wait */
 
 /*************************************************************************
  Issues a repeated start condition and sends address and transfer direction 
@@ -125,28 +137,30 @@ void i2c_start_wait(unsigned char address){
  Return:  0 device accessible
           1 failed to access device
 *************************************************************************/
-unsigned char i2c_rep_start(unsigned char address){
-    return i2c_start( address );
+unsigned char i2c_rep_start(unsigned char address)
+{
+	return i2c_start(address);
 
-}/* i2c_rep_start */
-
+} /* i2c_rep_start */
 
 /*************************************************************************
  Terminates the data transfer and releases the I2C bus
 *************************************************************************/
-void i2c_stop(void){
-    uint16_t timeout=0xFFFF;
-    /* send stop condition */
-	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+void i2c_stop(void)
+{
+	uint16_t timeout = 0xFFFF;
+	/* send stop condition */
+	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
 	// wait until stop condition is executed and bus released
-    while( --timeout > 0 ){
-        if( !(TWCR&(1<<TWSTO)) ){
-            return;
-        }
-    }
-    debug_str("i2c_stop(): timeout\n");
-}/* i2c_stop */
-
+	while (--timeout > 0)
+	{
+		if (!(TWCR & (1 << TWSTO)))
+		{
+			return;
+		}
+	}
+	debug_str("i2c_stop(): timeout\n");
+} /* i2c_stop */
 
 /*************************************************************************
   Send one byte to I2C device
@@ -155,81 +169,93 @@ void i2c_stop(void){
   Return:   0 write successful 
             1 write failed
 *************************************************************************/
-unsigned char i2c_write( unsigned char data ){
-    uint8_t   twst;
-    uint16_t timeout=0xFFFF;
+unsigned char i2c_write(unsigned char data)
+{
+	uint8_t twst;
+	uint16_t timeout = 0xFFFF;
 	// send data to the previously addressed device
 	TWDR = data;
-	TWCR = (1<<TWINT) | (1<<TWEN);
+	TWCR = (1 << TWINT) | (1 << TWEN);
 
 	// wait until transmission completed
-    // wait until  START condition has been transmitted
-    while( --timeout > 0 ){
-        if( TWCR & (1<<TWINT) ){
-            break;
-        }
-    }
-    if( timeout == 0 ){
-        debug_str("i2c_write(): timeout\n");
-        return 1;
-    }
+	// wait until  START condition has been transmitted
+	while (--timeout > 0)
+	{
+		if (TWCR & (1 << TWINT))
+		{
+			break;
+		}
+	}
+	if (timeout == 0)
+	{
+		debug_str("i2c_write(): timeout\n");
+		return 1;
+	}
 
 	// check value of TWI Status Register. Mask prescaler bits
 	twst = TW_STATUS & 0xF8;
-	if( twst != TW_MT_DATA_ACK ){
+	if (twst != TW_MT_DATA_ACK)
+	{
 		debug_str("i2c_write(): com error\n");
 		return 1;
 	}
 	return 0;
 
-}/* i2c_write */
-
+} /* i2c_write */
 
 /*************************************************************************
  Read one byte from the I2C device, request more data from device 
  
  Return:  byte read from I2C device
 *************************************************************************/
-unsigned char i2c_readAck(void){
-	uint16_t timeout=0xFFFF;
-	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
-	while( --timeout > 0 ){
-		if( TWCR & (1<<TWINT) ){
-		    return TWDR;
+unsigned char i2c_readAck(void)
+{
+	uint16_t timeout = 0xFFFF;
+	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
+	while (--timeout > 0)
+	{
+		if (TWCR & (1 << TWINT))
+		{
+			return TWDR;
 		}
 	}
-    debug_str("i2c_readAck(): timeout\n");
-    return 0;
-}/* i2c_readAck */
-
+	debug_str("i2c_readAck(): timeout\n");
+	return 0;
+} /* i2c_readAck */
 
 /*************************************************************************
  Read one byte from the I2C device, read is followed by a stop condition 
  
  Return:  byte read from I2C device
 *************************************************************************/
-unsigned char i2c_readNak(void){
-	uint16_t timeout=0xFFFF;
-	TWCR = (1<<TWINT) | (1<<TWEN);
-	while( --timeout > 0 ){
-		if( TWCR & (1<<TWINT) ){
+unsigned char i2c_readNak(void)
+{
+	uint16_t timeout = 0xFFFF;
+	TWCR = (1 << TWINT) | (1 << TWEN);
+	while (--timeout > 0)
+	{
+		if (TWCR & (1 << TWINT))
+		{
 			return TWDR;
 		}
 	}
-    debug_str("i2c_readNak(): timeout\n");
+	debug_str("i2c_readNak(): timeout\n");
 	return 0;
-}/* i2c_readNak */
+} /* i2c_readNak */
 
 // Print out all the active I2C addresses on the bus
-void searchI2C(){
+void searchI2C()
+{
 	uint8_t devAdr;
 	debug_str("Discovered I2C addresses: ");
-	for( devAdr=0; devAdr<=127; devAdr++ ){
-		if( !i2c_start( (devAdr<<1) | I2C_WRITE ) ){
+	for (devAdr = 0; devAdr <= 127; devAdr++)
+	{
+		if (!i2c_start((devAdr << 1) | I2C_WRITE))
+		{
 			debug_hex(devAdr, 2);
-            debug_putc(' ');
+			debug_putc(' ');
 		}
-		i2c_stop();                             // set stop conditon = release bus
+		i2c_stop(); // set stop conditon = release bus
 	}
 	debug_str("done\n");
 }

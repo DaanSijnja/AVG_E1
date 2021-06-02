@@ -1,23 +1,13 @@
 /*
 MPU6050 library by Nils Bebelaar
 
-Only reads out one axis
+Currently only reads Z-Axis, others are commented out
 */
 
 #include "Gyrosensor.h"
 #include "twi.h"
-#include "millisecs.h"
-#include "uart.h"
-
-void ERROR_CHECK(ret_code_t error_code)
-{
-    if (error_code != SUCCESS)
-    {
-        puts("ERROR");
-        while (1)
-            ; // loop forever
-    }
-}
+#include "millis.h"
+#include "debugPrint.h"
 
 void mpu_init(mpu_data_t *mpu_data)
 {
@@ -26,30 +16,37 @@ void mpu_init(mpu_data_t *mpu_data)
     //mpu_data->y_angle = 0;
     mpu_data->z_angle = 0;
 
-    ret_code_t error_code;
     //Write 0 to PWR_MGMT_1 to turn on the sensor
-    uint8_t data[2] = {PWR_MGMT_1, 0};
-    error_code = tw_master_transmit(MPU6050_ADDR, data, sizeof(data), false);
-    ERROR_CHECK(error_code);
+    if ((i2c_start((MPU6050_ADDR << 1) | I2C_WRITE)) == 0)
+    {
+        i2c_write(PWR_MGMT_1);
+        i2c_write(0);
+        i2c_stop();
+    }
+    else
+        debug_str("\nCannot communicate with MPU6050\n");
 
     //Set current millisecs as timestamp
-    mpu_data->lastTimestamp = millisecs();
+    mpu_data->lastTimestamp = millis();
 }
 
 void mpu_get_gyro_raw(mpu_data_t *mpu_data)
 {
-    ret_code_t error_code;
     //Need to read 6 registers, 2 for each rotation axis
     uint8_t data[2];
 
-    //Write the first register that will be read
-    data[0] = GYRO_ZOUT_H;
-    error_code = tw_master_transmit(MPU6050_ADDR, data, 1, true);
-    ERROR_CHECK(error_code);
-
-    //Get all the data of 6 registers
-    error_code = tw_master_receive(MPU6050_ADDR, data, sizeof(data));
-    ERROR_CHECK(error_code);
+    if ((i2c_start((MPU6050_ADDR << 1) | I2C_WRITE)) == 0)
+    {
+        i2c_write(GYRO_ZOUT_H);
+        i2c_rep_start((MPU6050_ADDR << 1) | I2C_READ);
+        data[0] = i2c_readAck();
+        //data[1] = i2c_readAck();
+        //data[2] = i2c_readAck();
+        //data[3] = i2c_readAck();
+        //data[4] = i2c_readAck();
+        data[1] = i2c_readNak();
+        i2c_stop();
+    }
 
     //For a 250deg/s range, the raw value is divided by 131.0, according to the datasheet
     //mpu_data->x_acc = ((int16_t)(data[0] << 8 | data[1])) / 131.0;
@@ -69,7 +66,7 @@ void mpu_get_gyro(mpu_data_t *mpu_data)
     mpu_data->z_acc = mpu_data->z_acc - mpu_data->z_err;
 
     //Get curent milliseconds and calculate elapsed time since last measurement
-    unsigned long currentMillis = millisecs();
+    unsigned long currentMillis = millis();
     float elapsedSecs = (currentMillis - mpu_data->lastTimestamp) / 1000.0;
 
     //Only calculate new angle if time has passed
@@ -103,7 +100,7 @@ void mpu_calc_error(mpu_data_t *mpu_data, int amount)
 
 //Reset angle values to 0
 void mpu_set_zero(mpu_data_t *mpu_data)
-{ 
+{
     //mpu_data->x_angle = 0;
     //mpu_data->y_angle = 0;
     mpu_data->z_angle = 0;
