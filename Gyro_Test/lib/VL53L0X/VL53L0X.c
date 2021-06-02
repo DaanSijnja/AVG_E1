@@ -14,6 +14,30 @@ VL53L0X datasheet.
 #include "twi.h"
 #include "millis.h"
 #include "VL53L0X.h"
+#include "debugPrint.h"
+
+//----- Functions for Clearing, Setting and Testing bits -----
+#define SetBit(reg, bit) (reg |= (1 << bit))
+#define ClearBit(reg, bit) (reg &= ~(1 << bit))
+#define TestBit(reg, bit) ((reg & (1 << bit)) != 0)
+
+//Read TOF sensor data and write to distance variable
+void getTOFData(tof_data_t *tof_data)
+{
+  if (!TestBit(PIND, PD3))
+  {
+    int reading;
+    reading = readReg16Bit(RESULT_RANGE_STATUS + 10); //Read data from sensor if GPIO is LOW
+    writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01);           //Reset GPIO status
+
+    if ((reading < 700) && (reading > 0))
+      tof_data->distance = reading;
+  }
+  if (timeoutOccurred())
+  {
+    debug_str(" !!! Timeout !!! \n");
+  }
+}
 
 //---------------------------------------------------------
 // Local variables within this file (private)

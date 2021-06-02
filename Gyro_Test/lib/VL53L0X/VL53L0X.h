@@ -159,6 +159,8 @@ typedef struct
   uint8_t rangeStatus;  //Ranging status (0-15)
 } tof_data_t;
 
+void getTOFData(tof_data_t *tof_data);
+
 //------------------------------------------------------------
 // API Functions
 //------------------------------------------------------------

@@ -27,33 +27,15 @@ void init(void)
 	searchI2C();
 
 	//----- Setup MPU6050 Rotation Sensor -----
-	mpu_init(&mpu_data);		   //Initialize MPU6050
-	mpu_calc_error(&mpu_data, 10); //Calculate MPU6050 error and  adjusts offsets
-	mpu_set_zero(&mpu_data);	   //Set values to 0
+	mpu_init(&mpu_data);			//Initialize MPU6050
+	mpu_calc_error(&mpu_data, 500); //Calculate MPU6050 error and  adjusts offsets
+	mpu_set_zero(&mpu_data);		//Set values to 0
 
 	//----- Setup VL53L0X Time of Flight Distance Sensor -----
 	initVL53L0X(1);
 	writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04); //Turn on GPIO interupt, the sensor will pull GPIO to LOW when data is ready
 	setMeasurementTimingBudget(33 * 1000UL);	  //Give the sensor 33ms to measure, 'Default mode' according to VL53L0X Datasheet
 	startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
-}
-
-//Read TOF sensor data and write to distance variable
-void getTOFData(void)
-{
-	if (!TestBit(PIND, PD3))
-	{
-		int reading;
-		reading = readReg16Bit(RESULT_RANGE_STATUS + 10); //Read data from sensor if GPIO is LOW
-		writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01);			  //Reset GPIO status
-
-		if ((reading < 700) && (reading > 0))
-			tof_data.distance = reading;
-	}
-	if (timeoutOccurred())
-	{
-		debug_str(" !!! Timeout !!! \n");
-	}
 }
 
 int main()
@@ -68,7 +50,7 @@ int main()
 		debug_str("\nROT: ");
 		debug_dec((int)mpu_data.z_angle + 360);
 
-		getTOFData();
+		getTOFData(&tof_data);
 
 		debug_str("\tTOF: ");
 		debug_dec(tof_data.distance);
