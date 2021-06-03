@@ -11,8 +11,8 @@
 
 #define TIME_VALUE	(40000)
 #define RESET_VALUE	(65636ul-TIME_VALUE)
-#define STOP_VALUE	(TIME_VALUE*0.025)
-#define RANGE		(1000)
+#define STOP_VALUE	(TIME_VALUE*0.075)
+#define RANGE		(STOP_VALUE/1.5)
 
 ISR(TIMER1_OVF_vect)
 {
