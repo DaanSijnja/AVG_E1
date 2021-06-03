@@ -45,9 +45,14 @@ int main()
 	// Main loop
 	while (1)
 	{
+		mpu_get_gyro(&mpu_data); //Get the rotational data
+		debug_str("\nROT: ");
+		debug_dec((int)mpu_data.z_angle + 360);
 
+		getTOFData(&tof_data, 1);
 
-
+		debug_str("\tTOF: ");
+		debug_dec(tof_data.distance);
 	}
 	return 0;
 }
