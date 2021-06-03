@@ -22,6 +22,8 @@ VL53L0X datasheet.
 #define TOF_SHUT_DDR DDRD
 #define TOF_SHUT_PINNO PD2
 
+#define TOF_NUMBER_READINGS_SMOOTHING 6
+
 //------------------------------------------------------------
 // For quick and dirty C++ compatibility
 //------------------------------------------------------------
@@ -151,15 +153,18 @@ typedef enum
 // Additional info for one measurement
 typedef struct
 {
-  uint16_t rawDistance; //uncorrected distance  [mm],   uint16_t
-  uint16_t distance;
-  uint16_t signalCnt;   //Signal  Counting Rate [mcps], uint16_t, fixpoint9.7
-  uint16_t ambientCnt;  //Ambient Counting Rate [mcps], uint16_t, fixpoint9.7
-  uint16_t spadCnt;     //Effective SPAD return count,  uint16_t, fixpoint8.8
-  uint8_t rangeStatus;  //Ranging status (0-15)
+  uint16_t rawDistance;                             //uncorrected distance  [mm],   uint16_t
+  uint16_t readings[TOF_NUMBER_READINGS_SMOOTHING]; //Array to store number of readings
+  uint8_t currentReadIndex;                         //Keep track of current reading
+  uint16_t distance;                                //Distance output, with or without smoothing enabled
+  uint16_t signalCnt;                               //Signal  Counting Rate [mcps], uint16_t, fixpoint9.7
+  uint16_t ambientCnt;                              //Ambient Counting Rate [mcps], uint16_t, fixpoint9.7
+  uint16_t spadCnt;                                 //Effective SPAD return count,  uint16_t, fixpoint8.8
+  uint8_t rangeStatus;                              //Ranging status (0-15)
 } tof_data_t;
 
-void getTOFData(tof_data_t *tof_data);
+//Reads data and puts it in tof_data type. Set enableSmoothing to 1 to enable data smoothing
+void getTOFData(tof_data_t *tof_data, uint8_t enableSmoothing);
 
 //------------------------------------------------------------
 // API Functions
@@ -172,7 +177,7 @@ uint8_t getAddress(void);
 // Iniitializes and configures the sensor.
 // If the optional argument io_2v8 is 1, the sensor is configured for 2V8 mode (2.8 V I/O);
 // if 0, the sensor is left in 1V8 mode. Returns 1 if the initialization completed successfully.
-uint8_t initVL53L0X(uint8_t io_2v8);
+uint8_t initVL53L0X(tof_data_t *tof_data, uint8_t io_2v8);
 
 // Sets the return signal rate limit to the given value in units of MCPS (mega counts per second).
 // This is the minimum amplitude of the signal reflected from the target and received by the sensor

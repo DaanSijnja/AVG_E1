@@ -22,16 +22,35 @@ VL53L0X datasheet.
 #define TestBit(reg, bit) ((reg & (1 << bit)) != 0)
 
 //Read TOF sensor data and write to distance variable
-void getTOFData(tof_data_t *tof_data)
+void getTOFData(tof_data_t *tof_data, uint8_t enableSmoothing)
 {
-  if (!TestBit(PIND, PD3))
+  if (!TestBit(TOF_GPIO_PINNO, TOF_GPIO_PIN))
   {
-    int reading;
+    uint16_t reading;
     reading = readReg16Bit(RESULT_RANGE_STATUS + 10); //Read data from sensor if GPIO is LOW
     writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01);           //Reset GPIO status
 
     if ((reading < 700) && (reading > 0))
-      tof_data->distance = reading;
+    {
+      if (enableSmoothing)
+      {
+        uint16_t total = 0;
+
+        tof_data->readings[tof_data->currentReadIndex] = reading;        //Write current reading to array
+        tof_data->currentReadIndex++;                                    //Increment read index
+        if (tof_data->currentReadIndex >= TOF_NUMBER_READINGS_SMOOTHING) //If index gets to end of array...
+          tof_data->currentReadIndex = 0;                                //...wrap around to beginning of index
+                                                                         //
+        for (uint8_t i = 0; i < TOF_NUMBER_READINGS_SMOOTHING; i++)      //Calculate total of all last readings
+          total += tof_data->readings[i];                                //
+                                                                         //
+        tof_data->distance = total / TOF_NUMBER_READINGS_SMOOTHING;      //Write the average to distance variable
+      }
+      else
+      {
+        tof_data->distance = reading;
+      }
+    }
   }
   if (timeoutOccurred())
   {
@@ -191,10 +210,14 @@ uint8_t getAddress()
 // enough unless a cover glass is added.
 // If io_2v8 (optional) is true or not given, the sensor is configured for 2V8
 // mode.
-bool initVL53L0X(bool io_2v8)
+bool initVL53L0X(tof_data_t *tof_data, bool io_2v8)
 {
-  // VL53L0X_DataInit() begin
+  for (uint8_t i = 0; i < TOF_NUMBER_READINGS_SMOOTHING; i++)
+  {
+    tof_data->readings[i] = 0;
+  }
 
+  // VL53L0X_DataInit() begin
   // sensor uses 1V8 mode for I/O by default; switch to 2V8 mode if necessary
   if (io_2v8)
   {

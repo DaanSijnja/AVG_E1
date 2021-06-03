@@ -32,7 +32,7 @@ void init(void)
 	mpu_set_zero(&mpu_data);		//Set values to 0
 
 	//----- Setup VL53L0X Time of Flight Distance Sensor -----
-	initVL53L0X(1);
+	initVL53L0X(&tof_data, 1);
 	writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04); //Turn on GPIO interupt, the sensor will pull GPIO to LOW when data is ready
 	setMeasurementTimingBudget(33 * 1000UL);	  //Give the sensor 33ms to measure, 'Default mode' according to VL53L0X Datasheet
 	startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
@@ -50,7 +50,7 @@ int main()
 		debug_str("\nROT: ");
 		debug_dec((int)mpu_data.z_angle + 360);
 
-		getTOFData(&tof_data);
+		getTOFData(&tof_data, 1);
 
 		debug_str("\tTOF: ");
 		debug_dec(tof_data.distance);
