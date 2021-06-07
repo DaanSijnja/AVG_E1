@@ -15,6 +15,8 @@
 mpu_data_t mpu_data; //MPU6050 Rotation Sensor
 tof_data_t tof_data; //VL53L0X Distance Sensor
 
+volatile unsigned long currentMillis, previousMillis;
+
 void init(void)
 {
 	debugInit();
@@ -23,8 +25,6 @@ void init(void)
 
 	i2c_init();
 	millis_init();
-
-	searchI2C();
 
 	//----- Setup MPU6050 Rotation Sensor -----
 	mpu_init(&mpu_data);			//Initialize MPU6050
@@ -38,16 +38,56 @@ void init(void)
 	startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
 }
 
+void getSensorData(void)
+{
+}
+
 int main()
 {
 	init();
 
+	int currentState = 0;
+	int treeSide = 0; //Left is 0, Right is 1
+
 	// Main loop
 	while (1)
 	{
+		getSensorData();
+
+		switch (currentState)
+		{
+		case 0: //Startup state
+			/* code */
+			break;
+
+		case 1: //Drive forward untill tree detection or front fence detection
+			/* code */
+			break;
+
+		case 2: //Rotate 90 degrees (left or right, depending on which side trees were on)
+			/* code */
+			break;
+
+		case 3: //Drive forward a bit
+			/* code */
+			break;
+
+		case 4: //Rotate another 90 degrees (left or right, depending on which side trees were on), then flip the side, return to state 1
+			/* code */
+			break;
 
 
 
+
+
+
+		case 10: //Emegency state
+			/* code */
+			break;
+
+		default:
+			break;
+		}
 	}
 	return 0;
 }
