@@ -5,6 +5,9 @@
 #include "millis.h"
 #include "VL53L0X.h"
 #include "Gyrosensor.h"
+#include "ultrasoon.h"
+#include "h_bridge.h"
+#include "servo.h"
 
 //----- Functions for Clearing, Setting and Testing bits -----
 #define SetBit(reg, bit) (reg |= (1 << bit))
@@ -75,11 +78,6 @@ int main()
 		case 4: //Rotate another 90 degrees (left or right, depending on which side trees were on), then flip the side, return to state 1
 			/* code */
 			break;
-
-
-
-
-
 
 		case 10: //Emegency state
 			/* code */
