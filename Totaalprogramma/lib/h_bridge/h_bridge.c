@@ -66,6 +66,8 @@ void init_h_bridge(void)
     TIMSK0 = (1 << OCIE0B) | (1 << OCIE0A) | (1 << TOIE0);
 
     sei();
+
+    h_bridge_set_percentage(FORWARDS, 0);
 }
 
 void h_bridge_set_percentage(int movement, signed char percentage)

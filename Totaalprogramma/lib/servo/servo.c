@@ -19,7 +19,6 @@ ISR(TIMER1_OVF_vect)
     TCNT1 = RESET_VALUE;
 
     PORT_1 |= (1 << PIN_1);
-    PORT_2 |= (1 << PIN_2);
 }
 
 ISR(TIMER1_COMPA_vect)
@@ -27,16 +26,10 @@ ISR(TIMER1_COMPA_vect)
     PORT_1 &= ~(1 << PIN_1);
 }
 
-ISR(TIMER1_COMPB_vect)
-{
-    PORT_2 &= ~(1 << PIN_2);
-}
-
 void init_servo(void)
 {
     // Config pins as output
     DDR_1 |= (1 << PIN_1);
-    DDR_2 |= (1 << PIN_2);
 
     // Use mode 0, clkdiv = 8
     TCCR1A = 0;
@@ -46,24 +39,15 @@ void init_servo(void)
 
     TCNT1 = RESET_VALUE;
 
-    servo1_set_percentage(0);
-    servo2_set_percentage(0);
+    servo_set_percentage(0);
 
     sei();
 }
 
-void servo1_set_percentage(signed char percentage)
+void servo_set_percentage(signed char percentage)
 {
     if (percentage >= -100 && percentage <= 100)
     {
         OCR1A = RESET_VALUE + STOP_VALUE + (RANGE / 100 * percentage);
-    }
-}
-
-void servo2_set_percentage(signed char percentage)
-{
-    if (percentage >= -100 && percentage <= 100)
-    {
-        OCR1B = RESET_VALUE + STOP_VALUE + (RANGE / 100 * percentage);
     }
 }

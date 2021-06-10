@@ -35,6 +35,7 @@
 //Advanced settings timer
 #define OVERFLOW 65535
 
+//Returns distance in mm
 int ultrasoon_distance(int triggerpin);
 void init_ultrasoon(void); // inits the ultrasoon
 
