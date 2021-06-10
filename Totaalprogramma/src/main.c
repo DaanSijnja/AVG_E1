@@ -1,3 +1,7 @@
+//--------------------------------------------------------//
+// De Haagste Hogeschool, Project AGV 2020-2021, Groep E2 //
+//--------------------------------------------------------//
+
 #include <stdint.h>
 #include <avr/io.h>
 #include "debugPrint.h"
@@ -31,6 +35,7 @@ void init(void)
 	i2c_init();
 	millis_init();
 	init_h_bridge();
+	init_servo();
 	init_ultrasoon();
 	init_tone();
 
