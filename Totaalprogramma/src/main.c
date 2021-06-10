@@ -27,8 +27,6 @@ volatile unsigned long currentMillis, previousMillis;
 
 void init(void)
 {
-	//----- Enable weak pullups on I2C lines -----
-	PORTD = (1 << PD1) | (1 << PD0); //I2C on ATMega2560 is on PD1 and PD2
 	SetBit(DDRA, PA6);				 //Output for tree LED
 
 	debugInit();
@@ -203,7 +201,7 @@ int main()
 			}
 			break;
 
-		case 10:					 //Emegency state
+		case 10:					 //Emergency state
 			if (TestBit(PORTA, PA7)) //Check emergency button
 				currentState = 10;
 

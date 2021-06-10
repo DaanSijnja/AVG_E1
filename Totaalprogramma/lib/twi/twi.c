@@ -16,6 +16,9 @@
 *************************************************************************/
 void i2c_init(void)
 {
+	//----- Enable weak pullups on I2C lines -----
+	PORTD = (1 << PD1) | (1 << PD0); //I2C on ATMega2560 is on PD1 and PD2
+
 	/* initialize TWI clock: 100 kHz clock, TWPS = 0 => prescaler = 1 */
 	TWSR = 0;							   /* no prescaler */
 	TWBR = ((F_CPU / SCL_CLOCK) - 16) / 2; /* must be > 10 for stable operation */

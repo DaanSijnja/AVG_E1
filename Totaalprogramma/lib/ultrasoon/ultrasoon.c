@@ -11,7 +11,7 @@
 
 static volatile unsigned long pulse = 0; //the variable for the pulse
 static volatile int echo_pin = 0;        //logic for the ultrasoon
-volatile int isTriggerd = 0;             // used in the while loop
+volatile int isTriggerd = 0;             //used in the while loop
 volatile int overflows = 0;
 
 int ultrasoon_distance(int triggerpin)
@@ -63,16 +63,16 @@ ISR(PCISR) // Interrupt service routine.
 {
     if (echo_pin == 1)
     {
-        TIMER_B = 0;                                 //TIMER COUNTER CONTROL REGITER (Stop the counter)
-        pulse = TNCT_timer + (overflows * OVERFLOW); // store the value of counter
-        TNCT_timer = 0;                              // reset the counter
+        TIMER_B = 0;                                 //TIMER COUNTER CONTROL REGISTER (Stop the counter)
+        pulse = TNCT_timer + (overflows * OVERFLOW); //store the value of counter
+        TNCT_timer = 0;                              //reset the counter
         echo_pin = 0;
         isTriggerd = 0;
         overflows = 0;
     }
     else
     {
-        TIMER_B |= (1 << CS10); // used to start the internal counter of microcontroller
+        TIMER_B |= (1 << CS10); //used to start the internal counter of microcontroller
         TIMSK_timer = (1 << TIMSK_bit);
         echo_pin = 1;
     }
