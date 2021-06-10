@@ -2,6 +2,7 @@
  *Daan Commit
  *Benjamin Commit
  *Jordy Commit
+ *ELias Commit
  *Hello World! - Nils Commit
  */
 
