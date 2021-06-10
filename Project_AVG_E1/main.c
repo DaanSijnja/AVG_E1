@@ -9,101 +9,69 @@
 #include <avr/interrupt.h>
 #include "ultrasoon.h"
 #include "servo.h"
-
-char getallen[10] ={
-    0b00000011,
-    0b10011111,
-    0b00100101,
-    0b00001101,
-    0b10011001,
-    0b01001001,
-    0b01000001,
-    0b00011111,
-    0b00000001,
-    0b00001001
-};
-
-void init (void)
-{
-	DDRH |= (1 << 5);
-	DDRH |= (1 << 4);
-	DDRG |= (1 << 5);
-
-	PORTH &= ~(1<<4);
-	PORTG &= ~(1<<5);
-}
-
-
-void send_data(char data)
-{
-    int i;
-	for(i = 0; i < 8; i++)
-	{
-		int bit = data & (1 << i);
-
-		if(bit)
-        {
-            PORTH |= (1<<5);
-        }
-		else
-        {
-            PORTH &= ~(1<<5);
-        }
-		PORTH |= (1<<4);
-		PORTH &= ~(1<<4);
-	}
-}
-
-void send_enable(char data)
-{
-	send_data(data);
-}
-
-void display(char data, char cijfer)
-{
-    PORTG &= ~(1<<5);
-	send_data(data);
-	send_enable(cijfer);
-    PORTG |= (1<<5);
-}
-
-void displaygetal(int getal)
-{
-    if(getal >= 0 && getal <= 9999)
-    {
-        int d[4] = {(getal/1000), (getal/100) % 10,(getal/10) % 10,(getal) % 10};
-        int i;
-        for(i = 0; i < 4; i++)
-        {
-            int send = getallen[d[i]];
-
-            if(i == 2)
-            {
-                send &= ~1;
-
-            }
-            display(send,(1 << 7) >> i);
-        }
-    }
-}
-
-
-
+#include "tone.h"
+#include <util/delay.h>
+int boomdetected = 0;
+int A = 0;
 int main(void)
 {
 
-    double COUNTA = 0;
+
     init_ultrasoon();
     init_servo();
-	init();
+    init_tone();
+    playtone(NOTE_D3,500);
 	sei();
-    servo1_set_percentage(-100);
-    COUNTA = distance(ultra_1_trigger);
+    servo1_set_percentage(100);
+
+    TCCR2A = 0;
+    TCCR2B = 0b00000101;
+    TIMSK2 = (1 << TOIE2);
+
+
+    DDRG &= ~((1 << PG0) | (1 << PG1));
+    DDRL |= (1<<PL7);
 
 	while(1)
 	{
+        if((PING & (1<<PG1)) != 0)
+        {
+            servo1_set_percentage(-100);
+            A = 1;
+        }
+        if((PING & (1<<PG0)) != 0)
+        {
+            servo1_set_percentage(90);
+            A = 1;
+        }
 
-        displaygetal(COUNTA*10);
+        if(((PING & (1<<PG1)) == 0) && ((PING & (1<<PG0)) == 0))
+        {
+            PORTL |= (1 << PL7);
+            A = 0;
+        }
+        else
+        {
+            PORTL &= ~(1 << PL7);
+        }
 
 	}
+}
+
+ISR(TIMER2_OVF_vect){
+
+    int afstand = distance(ultra_1_trigger);
+
+    if(afstand <= 10 && boomdetected == 0 && A == 1)
+    {
+        boomdetected = 1;
+        playtone(NOTE_A2,100);
+    }
+    if(afstand > 10)
+    {
+        boomdetected = 0;
+
+    }
+
+
 }

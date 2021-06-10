@@ -35,17 +35,6 @@ float distance(int triggerpin) {
     isTriggerd = 1;
     _delay_us(15);
 
-    unsigned long i = 0;
-    while(isTriggerd){
-       if(i > ((RETURNVALUE+10)*16))
-       {
-           PCMASK = 0;
-           return RETURNVALUE;
-       }
-       i++;
-
-    }
-
     return pulse/928.0;
 }
 void init_ultrasoon(){

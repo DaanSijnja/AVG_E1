@@ -60,6 +60,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="servo.h" />
+		<Unit filename="tone.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="tone.h" />
 		<Unit filename="ultrasoon.c">
 			<Option compilerVar="CC" />
 		</Unit>
