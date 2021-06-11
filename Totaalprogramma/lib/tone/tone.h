@@ -101,17 +101,17 @@
 #define NOTE_D8 4699
 #define NOTE_DS8 4978
 
-#define TIMERA TCCR0A
-#define TIMERB TCCR0B
-#define TIMERMASK TIMSK0
+#define TIMERA TCCR2A
+#define TIMERB TCCR2B
+#define TIMERMASK TIMSK2
 
-#define OCRA OCR0A
+#define OCRA OCR2A
 
-#define TIMER_COMPA TIMER0_COMPA_vect
+#define TIMER_COMPA TIMER2_COMPA_vect
 
-#define DDR_peizo DDRB
-#define PORT_peizo PORTB
-#define pin_peizo PB3
+#define DDR_peizo DDRA
+#define PORT_peizo PORTA
+#define pin_peizo PA5
 
 void init_tone();
 void playtone(uint16_t freq, uint32_t duration);

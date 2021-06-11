@@ -10,7 +10,7 @@
 //settings pins **make sure you use the trigger pins on one Register like the D register
 #define TRIGGERDDR DDRD
 #define TRIGGERPORT PORTD
-#define ultra_1_trigger PD0 //trigger pins for the ultrasoon 1
+#define ultra_1_trigger PB1 //trigger pins for the ultrasoon 1 pin 52
 #define ultra_2_trigger PD1 // if you need a second ultrasoon
 
 #define RETURNVALUE 60
@@ -26,12 +26,12 @@
 #define ultra_2_pin (1 << PCINT1) //The pin of the echo from the second ultrasoon
 
 //settings timer **use a 16 bit timer ** if you want to use a other timer you need to change the 5 to you're timer NOTE: if you use an 8 bit timer you need to change OVERFLOW to 255
-#define TIMER_B TCCR5B
-#define TIMSK_timer TIMSK5
-#define TNCT_timer TCNT5
-#define TIMSK_bit TOIE5
+#define TIMER_B TCCR3B
+#define TIMSK_timer TIMSK3
+#define TNCT_timer TCNT3
+#define TIMSK_bit TOIE3
 //settings ISR timer
-#define ISR_TIMER_OVF TIMER5_OVF_vect
+#define ISR_TIMER_OVF TIMER3_OVF_vect
 //Advanced settings timer
 #define OVERFLOW 65535
 

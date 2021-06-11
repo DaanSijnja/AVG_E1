@@ -16,7 +16,7 @@
 // The settings below are for the Mega, modify
 // in case you want to use other pins
 #define PORT_1 PORTB
-#define PIN_1 PB2
+#define PIN_1 PB2 //pin 51
 #define DDR_1 DDRB
 
 

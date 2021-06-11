@@ -18,7 +18,6 @@ void init_tone()
     TCCR4A |= (1 << 1); //ctc mode
     TCCR4B = 0;         //timer off
 
-    DDRB |= (1 << PB1);
     DDR_peizo |= (1 << pin_peizo);
     PORT_peizo &= ~(1 << pin_peizo);
 
@@ -93,7 +92,6 @@ ISR(TIMER4_COMPA_vect)
     }
     else
     {
-        PORTB ^= (1 << PB1);
         TIMSK4 &= ~(1 << 1);             //disable OCRA interrupt
         PORT_peizo &= ~(1 << pin_peizo); //peizo pin off
     }

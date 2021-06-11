@@ -19,6 +19,18 @@
 #define ClearBit(reg, bit) (reg &= ~(1 << bit))
 #define TestBit(reg, bit) ((reg & (1 << bit)) != 0)
 
+//----- Defines for pins -----
+#define opto_right PD7 //pin 38
+#define opto_left PG2 //pin 39
+
+#define switch_right PG5 //pin 4
+#define switch_left PE3 //pin 5
+
+#define led_green PA6 //pin 28
+#define led_red PA7 //pin 29
+
+
+
 //----- Create data storage for I2C sensors
 mpu_data_t mpu_data; //MPU6050 Rotation Sensor
 tof_data_t tof_data; //VL53L0X Distance Sensor
@@ -72,14 +84,14 @@ int main()
 	{
 		getSensorData();
 		currentMillis = millis();
-
+		/* Nood knop??
 		if (TestBit(PORTA, PA7)) //Check emergency button
 		{
 			if (currentState != 10)
 				stateBeforeEmergency = currentState; //Save previous state
 			currentState = 10;						 //State 10 is emergency state
 		}
-
+		*/
 		//-----Big STM Switch -----
 		switch (currentState)
 		{
@@ -101,7 +113,7 @@ int main()
 			if (ultrasoon_distance(ultra_1_trigger) < 200)
 			{
 				playtone(NOTE_A2, 500);			//Turn on note for 500ms
-				SetBit(PORTA, PA6);				//Turn on LED
+				SetBit(PORTA, led_red);				//Turn on LED
 				previousMillis = currentMillis; //Bookmark current time
 				currentState = 2;
 			}
@@ -119,7 +131,7 @@ int main()
 
 			if (currentMillis - previousMillis >= 500)
 			{
-				ClearBit(PORTA, PA6); //Turn off LED
+				ClearBit(PORTA, led_red); //Turn off LED
 				currentState = 3;
 			}
 			else
