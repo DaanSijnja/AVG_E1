@@ -39,10 +39,12 @@ volatile unsigned long currentMillis, previousMillis;
 
 void init(void)
 {
-	SetBit(DDRA, PA6);				 //Output for tree LED
+	SetBit(DDRA, PA6);	
+	SetBit(DDRA, PA7);			 //Output for tree LED
 
+	
 	debugInit();
-	i2c_init();
+	//i2c_init();
 	millis_init();
 	init_h_bridge();
 	init_servo();
@@ -50,21 +52,27 @@ void init(void)
 	init_tone();
 
 	//----- Setup MPU6050 Rotation Sensor -----
-	mpu_init(&mpu_data);			//Initialize MPU6050
-	mpu_calc_error(&mpu_data, 500); //Calculate MPU6050 error and  adjusts offsets
-	mpu_set_zero(&mpu_data);		//Set values to 0
+	//mpu_init(&mpu_data);			//Initialize MPU6050
+	//mpu_calc_error(&mpu_data, 500); //Calculate MPU6050 error and  adjusts offsets
+	//mpu_set_zero(&mpu_data);		//Set values to 0
 
 	//----- Setup VL53L0X Time of Flight Distance Sensor -----
-	initVL53L0X(&tof_data, 1);
-	writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04); //Turn on GPIO interupt, the sensor will pull GPIO to LOW when data is ready
-	setMeasurementTimingBudget(33 * 1000UL);	  //Give the sensor 33ms to measure, 'Default mode' according to VL53L0X Datasheet
-	startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
+	//initVL53L0X(&tof_data, 1);
+	//writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04); //Turn on GPIO interupt, the sensor will pull GPIO to LOW when data is ready
+	//setMeasurementTimingBudget(33 * 1000UL);	  //Give the sensor 33ms to measure, 'Default mode' according to VL53L0X Datasheet
+	//startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
 }
 
 void getSensorData(void)
 {
+	debug_str("\nTest");
 	getTOFData(&tof_data, 1); //Gets TOF data and saves it to tof_data.distance
-	mpu_get_gyro(&mpu_data);  //Gets gyro rotation and stores it in mpu_data.z_angle
+	//mpu_get_gyro(&mpu_data);  //Gets gyro rotation and stores it in mpu_data.z_angle
+
+	debug_str("\nROT: ");
+	//debug_dec((int)mpu_data.z_angle + 360);
+	debug_str("\tTOF: ");
+	debug_dec(tof_data.distance);
 
 	//Read button inputs:
 	//TestBit(PORTX, PXX);
@@ -73,17 +81,20 @@ void getSensorData(void)
 int main()
 {
 	init();
-
+	
+	
 	int currentState = 0, stateBeforeEmergency = 0;
 	int treeSide = 0; //Left is 0, Right is 1
 
 	previousMillis = millis();
-
+		
 	// Main loop
 	while (1)
 	{
-		getSensorData();
+		
+		//getSensorData();
 		currentMillis = millis();
+		debug_dec((int)currentMillis);
 		/* Nood knop??
 		if (TestBit(PORTA, PA7)) //Check emergency button
 		{
@@ -95,35 +106,42 @@ int main()
 		//-----Big STM Switch -----
 		switch (currentState)
 		{
-		case 0:			  //Startup state
+		case 0:
+			
+			//Startup state
 			if (treeSide) //Move the tree detection sensor to the correct side
 				servo_set_percentage(-100);
 			else
 				servo_set_percentage(90);
 
-			if (currentMillis - previousMillis >= 500) //Give servor 500ms to move to correct position
+			//if (currentMillis - previousMillis >= 500) //Give servor 500ms to move to correct position
 				currentState = 1;
-			else
-				currentState = 0;
+			//else
+				//currentState = 0;
+				
+				
 			break;
 
 		case 1: //Drive forward untill tree detection or front fence detection
+			
 			h_bridge_set_percentage(FORWARDS, 45);
-
-			if (ultrasoon_distance(ultra_1_trigger) < 200)
+			
+			if (ultrasoon_distance(ultra_1_trigger) < 20)
 			{
+				SetBit(PORTA, PA6);	
 				playtone(NOTE_A2, 500);			//Turn on note for 500ms
 				SetBit(PORTA, led_red);				//Turn on LED
 				previousMillis = currentMillis; //Bookmark current time
 				currentState = 2;
+				
 			}
-
+			/*
 			if (tof_data.distance < 200)
 			{
 				mpu_set_zero(&mpu_data);
 				currentState = 4;
 			}
-
+			*/
 			break;
 
 		case 2: //Tree detected, wait for 500ms
@@ -142,7 +160,7 @@ int main()
 		case 3: //Drive forward untill tree no longer detected, then go back to state 1
 			h_bridge_set_percentage(FORWARDS, 45);
 
-			if (ultrasoon_distance(ultra_1_trigger) > 200)
+			if (ultrasoon_distance(ultra_1_trigger) > 20)
 				currentState = 1;
 			else
 				currentState = 3;

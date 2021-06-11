@@ -11,7 +11,7 @@
 #define TRIGGERDDR DDRD
 #define TRIGGERPORT PORTD
 #define ultra_1_trigger PB1 //trigger pins for the ultrasoon 1 pin 52
-#define ultra_2_trigger PD1 // if you need a second ultrasoon
+#define ultra_2_trigger PD5 // if you need a second ultrasoon
 
 #define RETURNVALUE 60
 
