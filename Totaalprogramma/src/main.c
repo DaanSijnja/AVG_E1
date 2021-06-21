@@ -9,7 +9,7 @@
 #include "millis.h"
 #include "VL53L0X.h"
 #include "Gyrosensor.h"
-//#include "ultrasoon.h"
+#include "ultrasoon.h"
 #include "h_bridge.h"
 #include "servo.h"
 //#include "tone.h"
@@ -33,7 +33,7 @@
 mpu_data_t mpu_data; //MPU6050 Rotation Sensor
 tof_data_t tof_data; //VL53L0X Distance Sensor
 
-volatile unsigned long currentMillis, previousMillis;
+volatile unsigned long currentMillis, previousMillis, previousMillisUltrasoon;
 
 void init(void)
 {
@@ -45,7 +45,7 @@ void init(void)
 	millis_init();
 	init_motors();
 	init_servo();
-	//init_ultrasoon();
+	init_ultrasoon();
 	//init_tone();
 
 	searchI2C();
@@ -67,10 +67,18 @@ void getSensorData(void)
 	getTOFData(&tof_data, 1); //Gets TOF data and saves it to tof_data.distance
 	mpu_get_gyro(&mpu_data);  //Gets gyro rotation and stores it in mpu_data.z_angle
 
+	if (currentMillis - previousMillisUltrasoon > 80)
+		start_ultrasoon(ultra_1_trigger);
+
 	debug_str("\nROT: ");
 	debug_dec((int)mpu_data.z_angle + 360);
-	debug_str("\tTOF: ");
+	debug_str("\t  TOF: ");
 	debug_dec(tof_data.distance);
+
+	debug_str("\tSONIC: ");
+	debug_dec(ultrasoon_distance());
+	debug_str("\t Secs: ");
+	debug_dec(TCNT3);
 
 	//Read button inputs:
 	//TestBit(PORTX, PXX);
@@ -80,74 +88,59 @@ int main()
 {
 	init();
 
-	int currentState = 0, stateBeforeEmergency = 0;
+	int currentState = 0;
 	int treeSide = 0; //Left is 0, Right is 1
 
 	previousMillis = millis();
+	previousMillisUltrasoon = millis();
 
+	moveServo(0);
 	// Main loop
 	while (1)
 	{
-		moveServo(1);
-		moveMotors(70, 70);
+		currentMillis = millis();
+		getSensorData();
 
-		mpu_get_gyro(&mpu_data); //Get the rotational data
-		debug_str("\nROT: ");
-		debug_dec((int)mpu_data.z_angle + 360);
-
-		getTOFData(&tof_data, 1);
-
-		debug_str("\tTOF: ");
-		debug_dec(tof_data.distance);
+		//debug_dec((int)currentMillis);
 
 		/*
-		currentMillis = millis();
-		debug_dec((int)currentMillis);
-
-
 		//-----Big STM Switch -----
 		switch (currentState)
 		{
 		case 0:
-			
 			//Startup state
-			if (treeSide) //Move the tree detection sensor to the correct side
-				servo_set_percentage(-100);
-			else
-				servo_set_percentage(90);
+			moveServo(treeSide); //Move the tree detection sensor to the correct side
 
-			//if (currentMillis - previousMillis >= 500) //Give servor 500ms to move to correct position
+			if (currentMillis - previousMillis >= 500) //Give servor 500ms to move to correct position
 				currentState = 1;
-			//else
-				//currentState = 0;
-				
-				
+			else
+				currentState = 0;
+
 			break;
 
 		case 1: //Drive forward untill tree detection or front fence detection
-			
-			h_bridge_set_percentage(FORWARDS, 45);
-			
+
+			moveMotors(60, 60);
+
 			if (ultrasoon_distance(ultra_1_trigger) < 20)
 			{
-				SetBit(PORTA, PA6);	
+				SetBit(PORTA, PA6);
 				playtone(NOTE_A2, 500);			//Turn on note for 500ms
-				SetBit(PORTA, led_red);				//Turn on LED
+				SetBit(PORTA, led_red);			//Turn on LED
 				previousMillis = currentMillis; //Bookmark current time
 				currentState = 2;
-				
 			}
-			
+
 			if (tof_data.distance < 200)
 			{
 				mpu_set_zero(&mpu_data);
 				currentState = 4;
 			}
-			
+
 			break;
 
 		case 2: //Tree detected, wait for 500ms
-			h_bridge_set_percentage(FORWARDS, 0);
+			moveMotors(0, 0);
 
 			if (currentMillis - previousMillis >= 500)
 			{
@@ -160,7 +153,7 @@ int main()
 			break;
 
 		case 3: //Drive forward untill tree no longer detected, then go back to state 1
-			h_bridge_set_percentage(FORWARDS, 45);
+			moveMotors(60, 60);
 
 			if (ultrasoon_distance(ultra_1_trigger) > 20)
 				currentState = 1;
@@ -174,28 +167,28 @@ int main()
 			{
 				if (mpu_data.z_angle <= -90)
 				{
-					h_bridge_set_percentage(FORWARDS, 0);
+					moveMotors(0, 0);
 					previousMillis = currentMillis;
 					currentState = 5;
 				}
 				else
-					h_bridge_set_percentage(LEFT, 30);
+					moveMotors(-60, 60);
 			}
 			else
 			{
 				if (mpu_data.z_angle >= 90)
 				{
-					h_bridge_set_percentage(FORWARDS, 0);
+					moveMotors(0, 0);
 					previousMillis = currentMillis;
 					currentState = 5;
 				}
 				else
-					h_bridge_set_percentage(RIGHT, 30);
+					moveMotors(50, -50);
 			}
 			break;
 
 		case 5: //Drive forward a bit
-			h_bridge_set_percentage(FORWARDS, 30);
+			moveMotors(60, 60);
 
 			if (currentMillis - previousMillis >= 500)
 			{
@@ -211,35 +204,26 @@ int main()
 			{
 				if (mpu_data.z_angle <= -90)
 				{
-					h_bridge_set_percentage(FORWARDS, 0);
+					moveMotors(0, 0);
 					treeSide = 1;
 					previousMillis = currentMillis;
 					currentState = 0;
 				}
 				else
-					h_bridge_set_percentage(LEFT, 30);
+					moveMotors(-50, 50);
 			}
 			else
 			{
 				if (mpu_data.z_angle >= 90)
 				{
-					h_bridge_set_percentage(FORWARDS, 0);
+					moveMotors(0, 0);
 					treeSide = 0;
 					previousMillis = currentMillis;
 					currentState = 0;
 				}
 				else
-					h_bridge_set_percentage(RIGHT, 30);
+					moveMotors(50, -50);
 			}
-			break;
-
-		case 10:					 //Emergency state
-			if (TestBit(PORTA, PA7)) //Check emergency button
-				currentState = 10;
-
-			else
-				currentState = stateBeforeEmergency; //Go back to where we left off
-
 			break;
 
 		default:

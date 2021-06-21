@@ -9,14 +9,15 @@
 #include <util/delay.h>
 #include "ultrasoon.h"
 
+#define TestBit(reg, bit) ((reg & (1 << bit)) != 0)
+
 static volatile unsigned long pulse = 0; //the variable for the pulse
 static volatile int echo_pin = 0;        //logic for the ultrasoon
 volatile int isTriggerd = 0;             //used in the while loop
 volatile int overflows = 0;
 
-int ultrasoon_distance(int triggerpin)
+void start_ultrasoon(int triggerpin)
 {
-
     switch (triggerpin)
     {
     case ultra_1_trigger:
@@ -33,20 +34,11 @@ int ultrasoon_distance(int triggerpin)
     TRIGGERPORT |= (1 << triggerpin);
     _delay_us(15);
     TRIGGERPORT &= ~(1 << triggerpin);
-    isTriggerd = 1;
     _delay_us(15);
+}
 
-    unsigned long i = 0;
-    while (isTriggerd)
-    {
-        if (i > ((RETURNVALUE + 10) * 16))
-        {
-            PCMASK = 0;
-            return RETURNVALUE;
-        }
-        i++;
-    }
-
+int ultrasoon_distance(void)
+{
     return (int)(pulse / 92.8);
 }
 
@@ -57,24 +49,21 @@ void init_ultrasoon()
     TRIGGERPORT &= ~(1 << ultra_2_trigger);
     PCICR |= (1 << PCREG);
     PCMASK = 0;
+
+    TIMER_B |= (1 << CS10); //used to start the internal counter of microcontroller
+    TIMSK_timer = (1 << TIMSK_bit);
 }
 
 ISR(PCISR) // Interrupt service routine.
 {
-    if (echo_pin == 1)
+    if (TestBit(PORTB, ultra_1_pin))
     {
-        TIMER_B = 0;                                 //TIMER COUNTER CONTROL REGISTER (Stop the counter)
-        pulse = TNCT_timer + (overflows * OVERFLOW); //store the value of counter
-        TNCT_timer = 0;                              //reset the counter
-        echo_pin = 0;
-        isTriggerd = 0;
+        TNCT_timer = 0;
         overflows = 0;
     }
     else
     {
-        TIMER_B |= (1 << CS10); //used to start the internal counter of microcontroller
-        TIMSK_timer = (1 << TIMSK_bit);
-        echo_pin = 1;
+        pulse = TNCT_timer + (overflows * OVERFLOW); //store the value of counter
     }
 }
 

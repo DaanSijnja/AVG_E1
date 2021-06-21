@@ -36,7 +36,8 @@
 #define OVERFLOW 65535
 
 //Returns distance in mm
-int ultrasoon_distance(int triggerpin);
+int ultrasoon_distance(void);
+void start_ultrasoon(int triggerpin);
 void init_ultrasoon(void); // inits the ultrasoon
 
 #endif // ULTRASOON_H_INCLUDED
