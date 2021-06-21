@@ -1,41 +1,31 @@
 /*
- * h_bridge.h - XvR 2020
- */
+Use 8-bit timer0 for controlling 2-PWM outputs to control Left and Right motor.
+OC0A (Mega D13, PB7) = Left
+OC0B (Mega D4, PG5) = Right
+
+Nils Bebelaar 2020
+*/
 
 #ifndef _H_BRIDGE_H_
 #define _H_BRIDGE_H_
 
-// These pins are available on the shield via the header:
-//
-//		Mega	Uno
-// digital 5	PE3	PD5
-// digital 6	PH3	PD6
-// digital 9	PH6	PB1
-// analog 5	PF5	PC5
-
 // The settings below are for the Mega, modify
 // in case you want to use other pins
-#define PORT_RPWM PORTE
-#define PIN_RPWM PE3
-#define DDR_RPWM DDRE
+#define LEFT_PORT PORTB
+#define LEFT_PIN PB7
+#define LEFT_DDR DDRB
+#define RIGHT_PORT PORTG
+#define RIGHT_PIN PG5
+#define RIGHT_DDR DDRG
 
-#define PORT_LPWM PORTH
-#define PIN_LPWM PH3
-#define DDR_LPWM DDRH
+#define ENABLE_DDR DDRC
+#define ENABLE_PORT PORTC
+#define ENABLE_RIGHT_1 PC2
+#define ENABLE_RIGHT_2 PC3
+#define ENABLE_LEFT_1 PC4
+#define ENABLE_LEFT_2 PC5
 
-#define ENABLEDDR DDRC
-#define ENABLEPORT PORTC
-#define ENABLE_1_LEFT PC0
-#define ENABLE_1_RIGHT PC1
-#define ENABLE_2_LEFT PC2
-#define ENABLE_2_RIGHT PC3
-
-#define FORWARDS 1
-#define BACKWARDS 2
-#define LEFT 3
-#define RIGHT 4
-
-void init_h_bridge(void);
-void h_bridge_set_percentage(int movement, signed char percentage);
+void init_motors(void);
+void moveMotors(signed int power_left, signed int power_right);
 
 #endif /* _H_BRIDGE_H_ */

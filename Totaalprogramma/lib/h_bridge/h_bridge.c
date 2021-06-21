@@ -1,115 +1,75 @@
 /*
- * h_bridge.c - XvR 2020
- *
- * Use 8-bit timer. Uses interrupts in order to be able
- * to use the pins on the multifunction shield
- */
+Use 8-bit timer0 for controlling 2-PWM outputs to control Left and Right motor.
+OC0A (Mega D13, PB7) = Left
+OC0B (Mega D4, PG5) = Right
+
+Nils Bebelaar 2020
+*/
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include "h_bridge.h"
 
-ISR(TIMER0_OVF_vect)
-{
-    if (OCR0A == 0 && OCR0B == 0)
-    {
-        PORT_RPWM &= ~(1 << PIN_RPWM);
-        PORT_LPWM &= ~(1 << PIN_LPWM);
-    }
-    if (OCR0A != 0)
-    {
-        PORT_RPWM |= (1 << PIN_RPWM);
-    }
-    if (OCR0B != 0)
-    {
-        PORT_LPWM |= (1 << PIN_LPWM);
-    }
-}
+#define SetBit(reg, bit) (reg |= (1 << bit))
+#define ClearBit(reg, bit) (reg &= ~(1 << bit))
 
-ISR(TIMER0_COMPA_vect)
-{
-    if (OCR0A != 255)
-    {
-        PORT_RPWM &= ~(1 << PIN_RPWM);
-    }
-}
+//Asuming 16Mhz Board, prescalar set to 8, resulting in 2Mhz
+#define PERIOD 250 //PWM Frequency = 2Mhz / 250 = 8Khz
 
-ISR(TIMER0_COMPB_vect)
-{
-    if (OCR0B != 255)
-    {
-        PORT_LPWM &= ~(1 << PIN_LPWM);
-    }
-}
-
-void init_h_bridge(void)
+void init_motors(void)
 {
     // Config pins as output
-    DDR_RPWM |= (1 << PIN_RPWM);
-    DDR_LPWM |= (1 << PIN_LPWM);
+    LEFT_DDR |= (1 << LEFT_PIN);
+    RIGHT_DDR |= (1 << RIGHT_PIN);
 
-    // Output low
-    PORT_RPWM &= ~(1 << PIN_RPWM);
-    PORT_LPWM &= ~(1 << PIN_LPWM);
+    ENABLE_DDR |= (1 << ENABLE_LEFT_1) | (1 << ENABLE_LEFT_2) | (1 << ENABLE_RIGHT_1) | (1 << ENABLE_RIGHT_2);
+    ENABLE_PORT &= ~((1 << ENABLE_LEFT_1) | (1 << ENABLE_LEFT_2) | (1 << ENABLE_RIGHT_1) | (1 << ENABLE_RIGHT_2));
 
-    ENABLEDDR |= (1 << ENABLE_1_LEFT) | (1 << ENABLE_1_RIGHT) | (1 << ENABLE_2_LEFT) | (1 << ENABLE_2_RIGHT);
-    ENABLEPORT &= ~((1 << ENABLE_1_LEFT) | (1 << ENABLE_1_RIGHT) | (1 << ENABLE_2_LEFT) | (1 << ENABLE_2_RIGHT));
-    // Use mode 0, clkdiv = 64
-    TCCR0A = 0;
-    TCCR0B = (0 << CS02) | (1 << CS01) | (1 << CS00);
+    // Use Waveform mode 14 (datasheet p.145), clkdiv = 8, OCnA/OCnB/OCnC are set at 0, cleared at OCRnA/OCRnB/OCRnC (see below)
+    TCCR0A |= 1 << WGM01 | 1 << WGM00 | 1 << COM0A1 | 1 << COM0B1;
+    TCCR0B |= 0 << WGM02 | 1 << CS01 | 1 << CS00;
 
-    // Disable PWM output
-    OCR0A = 0;
-    OCR0B = 0;
-
-    // Interrupts on OCA, OCB and OVF
-    TIMSK0 = (1 << OCIE0B) | (1 << OCIE0A) | (1 << TOIE0);
-
-    sei();
-
-    h_bridge_set_percentage(FORWARDS, 0);
+    moveMotors(0, 0);
 }
 
-void h_bridge_set_percentage(int movement, signed char percentage)
+void moveMotors(signed int power_left, signed int power_right)
 {
-    if (percentage <= 100 && percentage >= 0)
+    if (power_left > 100)
+        power_left = 100;
+    if (power_left < -100)
+        power_left = -100;
+
+    if (power_right > 100)
+        power_right = 100;
+    if (power_right < -100)
+        power_right = -100;
+
+    if (power_left == 0)
+        OCR0A = 0;
+    if (power_left < 0)
     {
-        switch (movement)
-        {
-        case FORWARDS:
-            ENABLEPORT &= ~((1 << ENABLE_1_LEFT) | (1 << ENABLE_2_LEFT));
-            ENABLEPORT |= ((1 << ENABLE_1_RIGHT) | (1 << ENABLE_2_RIGHT));
+        OCR0A = (PERIOD * (-1) * power_left) / 100;
+        ClearBit(ENABLE_PORT, ENABLE_LEFT_1);
+        SetBit(ENABLE_PORT, ENABLE_LEFT_2);
+    }
+    if (power_left > 0)
+    {
+        OCR0A = (PERIOD * (1) * power_left) / 100;
+        ClearBit(ENABLE_PORT, ENABLE_LEFT_2);
+        SetBit(ENABLE_PORT, ENABLE_LEFT_1);
+    }
 
-            OCR0A = (255 * percentage) / 100;
-            OCR0B = (255 * percentage) / 100;
-
-            break;
-
-        case BACKWARDS:
-            ENABLEPORT &= ~((1 << ENABLE_1_RIGHT) | (1 << ENABLE_2_RIGHT));
-            ENABLEPORT |= ((1 << ENABLE_1_LEFT) | (1 << ENABLE_2_LEFT));
-
-            OCR0A = (255 * percentage) / 100;
-            OCR0B = (255 * percentage) / 100;
-            break;
-
-        case LEFT:
-            ENABLEPORT &= ~((1 << ENABLE_1_LEFT) | (1 << ENABLE_2_RIGHT));
-            ENABLEPORT |= ((1 << ENABLE_1_RIGHT) | (1 << ENABLE_2_LEFT));
-
-            OCR0A = (255 * percentage) / 100;
-            OCR0B = (255 * percentage) / 100;
-
-            break;
-
-        case RIGHT:
-            ENABLEPORT &= ~((1 << ENABLE_1_RIGHT) | (1 << ENABLE_2_LEFT));
-            ENABLEPORT |= ((1 << ENABLE_1_LEFT) | (1 << ENABLE_2_RIGHT));
-
-            OCR0A = (255 * percentage) / 100;
-            OCR0B = (255 * percentage) / 100;
-
-            break;
-        }
+    if (power_right == 0)
+        OCR0B = 0;
+    if (power_right < 0)
+    {
+        OCR0B = (PERIOD * (-1) * power_right) / 100;
+        ClearBit(ENABLE_PORT, ENABLE_RIGHT_1);
+        SetBit(ENABLE_PORT, ENABLE_RIGHT_2);
+    }
+    if (power_right > 0)
+    {
+        OCR0B = (PERIOD * (1) * power_right) / 100;
+        ClearBit(ENABLE_PORT, ENABLE_RIGHT_2);
+        SetBit(ENABLE_PORT, ENABLE_RIGHT_1);
     }
 }

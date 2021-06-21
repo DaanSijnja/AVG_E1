@@ -1,53 +1,34 @@
 /*
- * servo.c - XvR 2020
- *
- * Use 16-bit timer 1. Using interrupts in order to be
- * able to use the pins on the multi-function shield
- *
- */
+Use 16-bit timer1 for controlling PWM output to control Servo motor.
+OC1A (Mega D11)
+
+Nils Bebelaar 2020
+*/
+
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include "servo.h"
 
-#define TIME_VALUE (40000)
-#define RESET_VALUE (65636ul - TIME_VALUE)
-#define STOP_VALUE (TIME_VALUE * 0.075)
-#define RANGE (STOP_VALUE / 1.5)
-
-ISR(TIMER1_OVF_vect)
-{
-    TCNT1 = RESET_VALUE;
-
-    PORT_1 |= (1 << PIN_1);
-}
-
-ISR(TIMER1_COMPA_vect)
-{
-    PORT_1 &= ~(1 << PIN_1);
-}
+//Asuming 16Mhz Board, prescalar set to 8, resulting in 2MHz clock
+#define PERIOD 40000 //PWM Frequency = 2MHz / 1250 = 50 Hz
 
 void init_servo(void)
 {
     // Config pins as output
-    DDR_1 |= (1 << PIN_1);
+    SERVO_DDR |= (1 << SERVO_PIN);
 
-    // Use mode 0, clkdiv = 8
-    TCCR1A = 0;
-    TCCR1B = (0 << CS12) | (1 << CS11) | (0 << CS10);
-    // Interrupts on OCA, OCB and OVF
-    TIMSK1 = (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1);
+    // Use Waveform mode 14 (datasheet p.145), clkdiv = 8, OCnA/OCnB/OCnC are set at 0, cleared at OCRnA/OCRnB/OCRnC (see below)
+    TCCR1A |= 1 << WGM11 | 1 << COM1A1;
+    TCCR1B |= 1 << WGM13 | 1 << WGM12 | 1 << CS11;
 
-    TCNT1 = RESET_VALUE;
-
-    servo_set_percentage(0);
-
-    sei();
+    //Timer resets after ICR is reached, creating 50 Hz signal
+    ICR1 = PERIOD - 1;
 }
 
-void servo_set_percentage(signed char percentage)
+//Input side (0=left, 1=right)
+void moveServo(int side)
 {
-    if (percentage >= -100 && percentage <= 100)
-    {
-        OCR1A = RESET_VALUE + STOP_VALUE + (RANGE / 100 * percentage);
-    }
+    if (side)
+        OCR1A = 1250;
+    else
+        OCR1A = 8000;
 }

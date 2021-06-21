@@ -9,10 +9,10 @@
 #include "millis.h"
 #include "VL53L0X.h"
 #include "Gyrosensor.h"
-#include "ultrasoon.h"
+//#include "ultrasoon.h"
 #include "h_bridge.h"
 #include "servo.h"
-#include "tone.h"
+//#include "tone.h"
 
 //----- Functions for Clearing, Setting and Testing bits -----
 #define SetBit(reg, bit) (reg |= (1 << bit))
@@ -21,15 +21,13 @@
 
 //----- Defines for pins -----
 #define opto_right PD7 //pin 38
-#define opto_left PG2 //pin 39
+#define opto_left PG2  //pin 39
 
 #define switch_right PG5 //pin 4
-#define switch_left PE3 //pin 5
+#define switch_left PE3	 //pin 5
 
 #define led_green PA6 //pin 28
-#define led_red PA7 //pin 29
-
-
+#define led_red PA7	  //pin 29
 
 //----- Create data storage for I2C sensors
 mpu_data_t mpu_data; //MPU6050 Rotation Sensor
@@ -39,38 +37,38 @@ volatile unsigned long currentMillis, previousMillis;
 
 void init(void)
 {
-	SetBit(DDRA, PA6);	
-	SetBit(DDRA, PA7);			 //Output for tree LED
+	SetBit(DDRA, PA6);
+	SetBit(DDRA, PA7); //Output for tree LED
 
-	
 	debugInit();
-	//i2c_init();
+	i2c_init();
 	millis_init();
-	init_h_bridge();
+	init_motors();
 	init_servo();
-	init_ultrasoon();
-	init_tone();
+	//init_ultrasoon();
+	//init_tone();
+
+	searchI2C();
 
 	//----- Setup MPU6050 Rotation Sensor -----
-	//mpu_init(&mpu_data);			//Initialize MPU6050
-	//mpu_calc_error(&mpu_data, 500); //Calculate MPU6050 error and  adjusts offsets
-	//mpu_set_zero(&mpu_data);		//Set values to 0
+	mpu_init(&mpu_data);			//Initialize MPU6050
+	mpu_calc_error(&mpu_data, 500); //Calculate MPU6050 error and  adjusts offsets
+	mpu_set_zero(&mpu_data);		//Set values to 0
 
 	//----- Setup VL53L0X Time of Flight Distance Sensor -----
-	//initVL53L0X(&tof_data, 1);
-	//writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04); //Turn on GPIO interupt, the sensor will pull GPIO to LOW when data is ready
-	//setMeasurementTimingBudget(33 * 1000UL);	  //Give the sensor 33ms to measure, 'Default mode' according to VL53L0X Datasheet
-	//startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
+	initVL53L0X(&tof_data, 1);
+	writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04); //Turn on GPIO interupt, the sensor will pull GPIO to LOW when data is ready
+	setMeasurementTimingBudget(33 * 1000UL);	  //Give the sensor 33ms to measure, 'Default mode' according to VL53L0X Datasheet
+	startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
 }
 
 void getSensorData(void)
 {
-	debug_str("\nTest");
 	getTOFData(&tof_data, 1); //Gets TOF data and saves it to tof_data.distance
-	//mpu_get_gyro(&mpu_data);  //Gets gyro rotation and stores it in mpu_data.z_angle
+	mpu_get_gyro(&mpu_data);  //Gets gyro rotation and stores it in mpu_data.z_angle
 
 	debug_str("\nROT: ");
-	//debug_dec((int)mpu_data.z_angle + 360);
+	debug_dec((int)mpu_data.z_angle + 360);
 	debug_str("\tTOF: ");
 	debug_dec(tof_data.distance);
 
@@ -81,28 +79,32 @@ void getSensorData(void)
 int main()
 {
 	init();
-	
-	
+
 	int currentState = 0, stateBeforeEmergency = 0;
 	int treeSide = 0; //Left is 0, Right is 1
 
 	previousMillis = millis();
-		
+
 	// Main loop
 	while (1)
 	{
-		
-		//getSensorData();
+		moveServo(1);
+		moveMotors(70, 70);
+
+		mpu_get_gyro(&mpu_data); //Get the rotational data
+		debug_str("\nROT: ");
+		debug_dec((int)mpu_data.z_angle + 360);
+
+		getTOFData(&tof_data, 1);
+
+		debug_str("\tTOF: ");
+		debug_dec(tof_data.distance);
+
+		/*
 		currentMillis = millis();
 		debug_dec((int)currentMillis);
-		/* Nood knop??
-		if (TestBit(PORTA, PA7)) //Check emergency button
-		{
-			if (currentState != 10)
-				stateBeforeEmergency = currentState; //Save previous state
-			currentState = 10;						 //State 10 is emergency state
-		}
-		*/
+
+
 		//-----Big STM Switch -----
 		switch (currentState)
 		{
@@ -135,13 +137,13 @@ int main()
 				currentState = 2;
 				
 			}
-			/*
+			
 			if (tof_data.distance < 200)
 			{
 				mpu_set_zero(&mpu_data);
 				currentState = 4;
 			}
-			*/
+			
 			break;
 
 		case 2: //Tree detected, wait for 500ms
@@ -242,7 +244,7 @@ int main()
 
 		default:
 			break;
-		}
+		}*/
 	}
 	return 0;
 }

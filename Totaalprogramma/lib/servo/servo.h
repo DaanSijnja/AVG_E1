@@ -1,26 +1,20 @@
 /*
- * servo.h - XvR 2020
- */
+Use 16-bit timer1 for controlling PWM output to control Servo motor.
+OC1A (Mega D11)
+
+Nils Bebelaar 2020
+*/
 
 #ifndef _SERVO_H_
 #define _SERVO_H_
 
-// These pins are available on the shield via the header:
-//
-//		Mega	Uno
-// digital 5	PE3	PD5
-// digital 6	PH3	PD6
-// digital 9	PH6	PB1
-// analog 5	PF5	PC5
-
 // The settings below are for the Mega, modify
 // in case you want to use other pins
-#define PORT_1 PORTB
-#define PIN_1 PB2 //pin 51
-#define DDR_1 DDRB
-
+#define SERVO_PORT PORTB
+#define SERVO_PIN PB5
+#define SERVO_DDR DDRB
 
 void init_servo(void);
-void servo_set_percentage(signed char percentage);
+void moveServo(int angle);
 
 #endif /* _SERVO_H_ */
