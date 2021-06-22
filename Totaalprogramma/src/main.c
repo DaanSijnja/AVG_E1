@@ -67,8 +67,11 @@ void getSensorData(void)
 	getTOFData(&tof_data, 1); //Gets TOF data and saves it to tof_data.distance
 	mpu_get_gyro(&mpu_data);  //Gets gyro rotation and stores it in mpu_data.z_angle
 
-	if (currentMillis - previousMillisUltrasoon > 80)
-		start_ultrasoon(ultra_1_trigger);
+    if (currentMillis - previousMillisUltrasoon > 100)
+    {
+        start_ultrasoon();
+        previousMillisUltrasoon = currentMillis;
+    }
 
 	debug_str("\nROT: ");
 	debug_dec((int)mpu_data.z_angle + 360);
