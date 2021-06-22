@@ -1,0 +1,47 @@
+#include <stdint.h>
+#include <avr/io.h>
+#include "debugPrint.h"
+#include "millis.h"
+#include "ultrasoon.h"
+
+//----- Functions for Clearing, Setting and Testing bits -----
+#define SetBit(reg, bit) (reg |= (1 << bit))
+#define ClearBit(reg, bit) (reg &= ~(1 << bit))
+#define TestBit(reg, bit) ((reg & (1 << bit)) != 0)
+
+volatile unsigned long currentMillis, previousMillis, previousMillisUltrasoon;
+
+void init(void)
+{
+    debugInit();
+    millis_init();
+    init_ultrasoon();
+}
+
+void getSensorData(void)
+{
+    if (currentMillis - previousMillisUltrasoon > 100)
+    {
+        start_ultrasoon();
+        previousMillisUltrasoon = currentMillis;
+    }
+
+    debug_str("\nSONIC: ");
+    debug_dec(ultrasoon_distance());
+}
+
+int main()
+{
+    init();
+
+    previousMillis = millis();
+    previousMillisUltrasoon = millis();
+
+    // Main loop
+    while (1)
+    {
+        currentMillis = millis();
+        getSensorData();
+    }
+    return 0;
+}

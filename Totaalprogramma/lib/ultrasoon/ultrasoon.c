@@ -1,73 +1,52 @@
 /*
-*       Made by Daan Sijnja
-*       Student at HHS
-*       Studentcode: 20177747
+*       Made by Daan Sijnja, adapted by Nils Bebelaar
+*       Students at HHS
+*       Studentcode: 20177747, 20164882
 */
 
+#include <stdint.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "ultrasoon.h"
 
+#include "debugPrint.h"
+
+//----- Functions for Clearing, Setting and Testing bits -----
+#define SetBit(reg, bit) (reg |= (1 << bit))
+#define ClearBit(reg, bit) (reg &= ~(1 << bit))
 #define TestBit(reg, bit) ((reg & (1 << bit)) != 0)
 
-static volatile unsigned long pulse = 0; //the variable for the pulse
-static volatile int echo_pin = 0;        //logic for the ultrasoon
-volatile int isTriggerd = 0;             //used in the while loop
-volatile int overflows = 0;
+volatile uint16_t distance;
 
-void start_ultrasoon(int triggerpin)
+void start_ultrasoon()
 {
-    switch (triggerpin)
-    {
-    case ultra_1_trigger:
-        PCMASK = 0;
-        PCMASK = ultra_1_pin;
-        break;
+    TCCR5B = 0;
+    TIMSK5 = 0;
 
-    case ultra_2_trigger:
-        PCMASK = 0;
-        PCMASK = ultra_2_pin;
-        break;
-    }
+    SetBit(TRIGGERPORT, ultra_1_trigger);
+    _delay_us(15);
+    ClearBit(TRIGGERPORT, ultra_1_trigger);
 
-    TRIGGERPORT |= (1 << triggerpin);
-    _delay_us(15);
-    TRIGGERPORT &= ~(1 << triggerpin);
-    _delay_us(15);
+    TCNT5 = 0;
+    TCCR5B |= (1 << CS51) | (1 << ICNC5) | (0 << ICES5);
 }
 
-int ultrasoon_distance(void)
+uint16_t ultrasoon_distance(void)
 {
-    return (int)(pulse / 92.8);
+    distance = (ICR5L) | (ICR5H << 8);
+    distance = distance - 7300; //Subtract time between Trigger and first Echo edge
+    return (uint16_t)((distance * 10) / 92.8);
 }
 
 void init_ultrasoon()
 {
-    TRIGGERDDR |= (1 << ultra_1_trigger) | (1 << ultra_2_trigger);
-    TRIGGERPORT &= ~(1 << ultra_1_trigger);
-    TRIGGERPORT &= ~(1 << ultra_2_trigger);
-    PCICR |= (1 << PCREG);
-    PCMASK = 0;
+    SetBit(TRIGGERDDR, ultra_1_trigger);
+    ClearBit(TRIGGERPORT, ultra_1_trigger);
 
-    TIMER_B |= (1 << CS10); //used to start the internal counter of microcontroller
-    TIMSK_timer = (1 << TIMSK_bit);
-}
+    TCCR5A = 0;
+    TCCR5B = 0;
+    TIMSK5 = 0;
 
-ISR(PCISR) // Interrupt service routine.
-{
-    if (TestBit(PORTB, ultra_1_pin))
-    {
-        TNCT_timer = 0;
-        overflows = 0;
-    }
-    else
-    {
-        pulse = TNCT_timer + (overflows * OVERFLOW); //store the value of counter
-    }
-}
-
-ISR(ISR_TIMER_OVF)
-{
-    overflows++;
+    sei();
 }
