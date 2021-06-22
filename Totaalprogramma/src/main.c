@@ -131,13 +131,20 @@ int main()
 			break;
 
 		case 1: //Drive forward untill tree detection or front fence detection
-
-			moveMotors(60, 60);
+			if (TestBit(PINL, IR_LEFT) == TestBit(PINL, IR_RIGHT))
+				moveMotors(60, 60);
+			else
+			{
+				if (!TestBit(PINL, IR_RIGHT))
+					moveMotors(75, 40);
+				if (!TestBit(PINL, IR_LEFT))
+					moveMotors(40, 75);
+			}
 
 			if (ultrasoon_distance() < 8000)
 			{
 				SetBit(PORTA, PA7);
-				playtone(NOTE_A1, 500);			//Turn on note for 500ms
+				playtone(NOTE_A1, 1000);		//Turn on note for 500ms
 				SetBit(PORTA, led_red);			//Turn on LED
 				previousMillis = currentMillis; //Bookmark current time
 				currentState = 2;
@@ -165,7 +172,15 @@ int main()
 			break;
 
 		case 3: //Drive forward untill tree no longer detected, then go back to state 1
-			moveMotors(60, 60);
+			if (TestBit(PINL, IR_LEFT) == TestBit(PINL, IR_RIGHT))
+				moveMotors(60, 60);
+			else
+			{
+				if (!TestBit(PINL, IR_RIGHT))
+					moveMotors(75, 40);
+				if (!TestBit(PINL, IR_LEFT))
+					moveMotors(40, 75);
+			}
 
 			if (ultrasoon_distance() > 8000)
 				currentState = 1;
@@ -195,14 +210,14 @@ int main()
 					currentState = 5;
 				}
 				else
-					moveMotors(50, -50);
+					moveMotors(60, -60);
 			}
 			break;
 
 		case 5: //Drive forward a bit
-			moveMotors(60, 60);
+			moveMotors(60, 55);
 
-			if (currentMillis - previousMillis >= 500)
+			if (currentMillis - previousMillis >= 750)
 			{
 				mpu_set_zero(&mpu_data);
 				currentState = 6;
@@ -222,7 +237,7 @@ int main()
 					currentState = 0;
 				}
 				else
-					moveMotors(-50, 50);
+					moveMotors(-60, 60);
 			}
 			else
 			{
@@ -234,7 +249,7 @@ int main()
 					currentState = 0;
 				}
 				else
-					moveMotors(50, -50);
+					moveMotors(60, -60);
 			}
 			break;
 
