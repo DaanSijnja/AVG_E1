@@ -15,8 +15,8 @@ volatile int32_t timer_toggle_counter = 0;
 void init_tone()
 {
 
-    TCCR4A |= (1 << 1); //ctc mode
-    TCCR4B = 0;         //timer off
+    TCCR2A |= (1 << 1); //ctc mode
+    TCCR2B = 0;         //timer off
 
     DDR_peizo |= (1 << pin_peizo);
     PORT_peizo &= ~(1 << pin_peizo);
@@ -65,24 +65,22 @@ void playtone(uint16_t freq, uint32_t duration)
     }
 
     //set OCRA
-    OCR4A = OCR;
+    OCR2A = OCR;
     //turn on the timer
     timer_toggle_counter = toggle_count;
-    TCCR4B |= prescaler;
-    TIMSK4 |= (1 << 1); //enable OCRA interrupt
+    TCCR2B |= prescaler;
+    TIMSK2 |= (1 << 1); //enable OCRA interrupt
 }
 
 void stoptune()
 {
-    TIMSK4 &= ~(1 << 1); //disable OCRA interrupt
+    TIMSK2 &= ~(1 << 1); //disable OCRA interrupt
 }
 
-ISR(TIMER4_COMPA_vect)
+ISR(TIMER2_COMPA_vect)
 {
-
     if (timer_toggle_counter != 0)
     {
-
         PORT_peizo ^= (1 << pin_peizo);
 
         if (timer_toggle_counter > 0)
@@ -92,7 +90,7 @@ ISR(TIMER4_COMPA_vect)
     }
     else
     {
-        TIMSK4 &= ~(1 << 1);             //disable OCRA interrupt
+        TIMSK2 &= ~(1 << 1);             //disable OCRA interrupt
         PORT_peizo &= ~(1 << pin_peizo); //peizo pin off
     }
 }

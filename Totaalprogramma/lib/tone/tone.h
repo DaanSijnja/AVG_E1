@@ -111,7 +111,7 @@
 
 #define DDR_peizo DDRA
 #define PORT_peizo PORTA
-#define pin_peizo PA5
+#define pin_peizo PA2
 
 void init_tone();
 void playtone(uint16_t freq, uint32_t duration);

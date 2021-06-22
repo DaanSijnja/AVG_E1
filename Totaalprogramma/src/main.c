@@ -12,7 +12,7 @@
 #include "ultrasoon.h"
 #include "h_bridge.h"
 #include "servo.h"
-//#include "tone.h"
+#include "tone.h"
 
 //----- Functions for Clearing, Setting and Testing bits -----
 #define SetBit(reg, bit) (reg |= (1 << bit))
@@ -20,8 +20,8 @@
 #define TestBit(reg, bit) ((reg & (1 << bit)) != 0)
 
 //----- Defines for pins -----
-#define opto_right PD7 //pin 38
-#define opto_left PG2  //pin 39
+#define IR_LEFT PL6	 //pin 43
+#define IR_RIGHT PL4 //pin 45
 
 #define switch_right PG5 //pin 4
 #define switch_left PE3	 //pin 5
@@ -40,13 +40,16 @@ void init(void)
 	SetBit(DDRA, PA6);
 	SetBit(DDRA, PA7); //Output for tree LED
 
+	ClearBit(DDRL, IR_LEFT);
+	ClearBit(DDRL, IR_RIGHT);
+
 	debugInit();
 	i2c_init();
 	millis_init();
 	init_motors();
 	init_servo();
 	init_ultrasoon();
-	//init_tone();
+	init_tone();
 
 	searchI2C();
 
@@ -60,6 +63,8 @@ void init(void)
 	writeReg(SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04); //Turn on GPIO interupt, the sensor will pull GPIO to LOW when data is ready
 	setMeasurementTimingBudget(33 * 1000UL);	  //Give the sensor 33ms to measure, 'Default mode' according to VL53L0X Datasheet
 	startContinuous(0);							  //Start continous measurement, meaning the sensor will continue to measure distance when last data was read
+
+	tof_data.distance = 1000;
 }
 
 void getSensorData(void)
@@ -67,11 +72,11 @@ void getSensorData(void)
 	getTOFData(&tof_data, 1); //Gets TOF data and saves it to tof_data.distance
 	mpu_get_gyro(&mpu_data);  //Gets gyro rotation and stores it in mpu_data.z_angle
 
-    if (currentMillis - previousMillisUltrasoon > 100)
-    {
-        start_ultrasoon();
-        previousMillisUltrasoon = currentMillis;
-    }
+	if (currentMillis - previousMillisUltrasoon > 100)
+	{
+		start_ultrasoon();
+		previousMillisUltrasoon = currentMillis;
+	}
 
 	debug_str("\nROT: ");
 	debug_dec((int)mpu_data.z_angle + 360);
@@ -80,8 +85,12 @@ void getSensorData(void)
 
 	debug_str("\tSONIC: ");
 	debug_dec(ultrasoon_distance());
-	debug_str("\t Secs: ");
-	debug_dec(TCNT3);
+
+	debug_str("\t IR Left: ");
+	debug_dec(!TestBit(PINL, IR_LEFT));
+
+	debug_str("\t IR Right: ");
+	debug_dec(!TestBit(PINL, IR_RIGHT));
 
 	//Read button inputs:
 	//TestBit(PORTX, PXX);
@@ -98,15 +107,15 @@ int main()
 	previousMillisUltrasoon = millis();
 
 	moveServo(0);
+
 	// Main loop
 	while (1)
 	{
 		currentMillis = millis();
 		getSensorData();
+		debug_str("\tCase: ");
+		debug_dec(currentState);
 
-		//debug_dec((int)currentMillis);
-
-		/*
 		//-----Big STM Switch -----
 		switch (currentState)
 		{
@@ -125,10 +134,10 @@ int main()
 
 			moveMotors(60, 60);
 
-			if (ultrasoon_distance(ultra_1_trigger) < 20)
+			if (ultrasoon_distance() < 8000)
 			{
-				SetBit(PORTA, PA6);
-				playtone(NOTE_A2, 500);			//Turn on note for 500ms
+				SetBit(PORTA, PA7);
+				playtone(NOTE_A1, 500);			//Turn on note for 500ms
 				SetBit(PORTA, led_red);			//Turn on LED
 				previousMillis = currentMillis; //Bookmark current time
 				currentState = 2;
@@ -158,7 +167,7 @@ int main()
 		case 3: //Drive forward untill tree no longer detected, then go back to state 1
 			moveMotors(60, 60);
 
-			if (ultrasoon_distance(ultra_1_trigger) > 20)
+			if (ultrasoon_distance() > 8000)
 				currentState = 1;
 			else
 				currentState = 3;
@@ -231,7 +240,7 @@ int main()
 
 		default:
 			break;
-		}*/
+		}
 	}
 	return 0;
 }

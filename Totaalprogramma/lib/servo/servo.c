@@ -30,5 +30,5 @@ void moveServo(int side)
     if (side)
         OCR1A = 1250;
     else
-        OCR1A = 8000;
+        OCR1A = 5400;
 }

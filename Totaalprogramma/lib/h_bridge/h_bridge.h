@@ -6,6 +6,8 @@ OC0B (Mega D4, PG5) = Right
 Nils Bebelaar 2020
 */
 
+#include <stdint.h>
+
 #ifndef _H_BRIDGE_H_
 #define _H_BRIDGE_H_
 
@@ -26,6 +28,6 @@ Nils Bebelaar 2020
 #define ENABLE_LEFT_2 PC5
 
 void init_motors(void);
-void moveMotors(signed int power_left, signed int power_right);
+void moveMotors(int8_t power_left, int8_t power_right);
 
 #endif /* _H_BRIDGE_H_ */

@@ -17,7 +17,8 @@
 #define ClearBit(reg, bit) (reg &= ~(1 << bit))
 #define TestBit(reg, bit) ((reg & (1 << bit)) != 0)
 
-volatile uint16_t distance;
+volatile int16_t distance;
+volatile int8_t overflow;
 
 void start_ultrasoon()
 {
@@ -30,13 +31,15 @@ void start_ultrasoon()
 
     TCNT5 = 0;
     TCCR5B |= (1 << CS51) | (1 << ICNC5) | (0 << ICES5);
+    TIMSK5 = 0 | (1 << TOIE5);
+    overflow = 0;
 }
 
 uint16_t ultrasoon_distance(void)
 {
-    distance = (ICR5L) | (ICR5H << 8);
-    distance = distance - 7300; //Subtract time between Trigger and first Echo edge
-    return (uint16_t)((distance * 10) / 92.8);
+    if (overflow == 0)
+        distance = (ICR5L) | (ICR5H << 8);
+    return (distance - 60000);
 }
 
 void init_ultrasoon()
@@ -49,4 +52,9 @@ void init_ultrasoon()
     TIMSK5 = 0;
 
     sei();
+}
+
+ISR(TIMER5_OVF_vect)
+{
+    overflow = 1;
 }
