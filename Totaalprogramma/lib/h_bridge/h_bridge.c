@@ -48,19 +48,19 @@ void moveMotors(int8_t power_left, int8_t power_right)
 
     if (power_left == 0)
     {
-        OCR0A = 0;
+        OCR0B = 0;
         ClearBit(ENABLE_PORT, ENABLE_LEFT_1);
         ClearBit(ENABLE_PORT, ENABLE_LEFT_2);
     }
     if (power_left < 0)
     {
-        OCR0A = (PERIOD * power_left * (-1)) / 100;
+        OCR0B = (PERIOD * power_left * (-1)) / 100;
         ClearBit(ENABLE_PORT, ENABLE_LEFT_1);
         SetBit(ENABLE_PORT, ENABLE_LEFT_2);
     }
     if (power_left > 0)
     {
-        OCR0A = (PERIOD * power_left) / 100;
+        OCR0B = (PERIOD * power_left) / 100;
         ClearBit(ENABLE_PORT, ENABLE_LEFT_2);
         SetBit(ENABLE_PORT, ENABLE_LEFT_1);
     }
@@ -72,19 +72,19 @@ void moveMotors(int8_t power_left, int8_t power_right)
 
     if (power_right == 0)
     {
-        OCR0B = 0;
+        OCR0A = 0;
         ClearBit(ENABLE_PORT, ENABLE_RIGHT_1);
         ClearBit(ENABLE_PORT, ENABLE_RIGHT_2);
     }
     if (power_right < 0)
     {
-        OCR0B = (PERIOD * power_right * (-1)) / 100;
+        OCR0A = (PERIOD * power_right * (-1)) / 100;
         ClearBit(ENABLE_PORT, ENABLE_RIGHT_1);
         SetBit(ENABLE_PORT, ENABLE_RIGHT_2);
     }
     if (power_right > 0)
     {
-        OCR0B = (PERIOD * power_right) / 100;
+        OCR0A = (PERIOD * power_right) / 100;
         ClearBit(ENABLE_PORT, ENABLE_RIGHT_2);
         SetBit(ENABLE_PORT, ENABLE_RIGHT_1);
     }

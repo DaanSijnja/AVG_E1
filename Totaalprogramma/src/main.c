@@ -33,7 +33,7 @@
 mpu_data_t mpu_data; //MPU6050 Rotation Sensor
 tof_data_t tof_data; //VL53L0X Distance Sensor
 
-volatile unsigned long currentMillis, previousMillis, previousMillisUltrasoon;
+volatile unsigned long currentMillis, previousMillis, previousMillisUltrasoon, previousMillisTOF;
 
 void init(void)
 {
@@ -102,9 +102,11 @@ int main()
 
 	int currentState = 0;
 	int treeSide = 0; //Left is 0, Right is 1
+	int pathsDone = 0;
 
 	previousMillis = millis();
 	previousMillisUltrasoon = millis();
+	previousMillisTOF = millis();
 
 	moveServo(0);
 
@@ -116,6 +118,13 @@ int main()
 		debug_str("\tCase: ");
 		debug_dec(currentState);
 
+		if (pathsDone >= 3)
+		{
+			playtone(NOTE_A2, 500);
+			treeSide = 0;
+			pathsDone = 0;
+		}
+
 		//-----Big STM Switch -----
 		switch (currentState)
 		{
@@ -124,7 +133,11 @@ int main()
 			moveServo(treeSide); //Move the tree detection sensor to the correct side
 
 			if (currentMillis - previousMillis >= 500) //Give servor 500ms to move to correct position
+			{
 				currentState = 1;
+				previousMillis = currentMillis;
+				previousMillisTOF = currentMillis;
+			}
 			else
 				currentState = 0;
 
@@ -136,21 +149,21 @@ int main()
 			else
 			{
 				if (!TestBit(PINL, IR_RIGHT))
-					moveMotors(75, 40);
-				if (!TestBit(PINL, IR_LEFT))
 					moveMotors(40, 75);
+				if (!TestBit(PINL, IR_LEFT))
+					moveMotors(75, 40);
 			}
 
 			if (ultrasoon_distance() < 8000)
 			{
 				SetBit(PORTA, PA7);
-				playtone(NOTE_A1, 1000);		//Turn on note for 500ms
+				playtone(NOTE_A6, 500);			//Turn on note for 500ms
 				SetBit(PORTA, led_red);			//Turn on LED
 				previousMillis = currentMillis; //Bookmark current time
 				currentState = 2;
 			}
 
-			if (tof_data.distance < 200)
+			if ((tof_data.distance < 200) && (currentMillis - previousMillisTOF >= 2000))
 			{
 				mpu_set_zero(&mpu_data);
 				currentState = 4;
@@ -164,6 +177,7 @@ int main()
 			if (currentMillis - previousMillis >= 500)
 			{
 				ClearBit(PORTA, led_red); //Turn off LED
+				previousMillis = currentMillis;
 				currentState = 3;
 			}
 			else
@@ -177,13 +191,16 @@ int main()
 			else
 			{
 				if (!TestBit(PINL, IR_RIGHT))
-					moveMotors(75, 40);
-				if (!TestBit(PINL, IR_LEFT))
 					moveMotors(40, 75);
+				if (!TestBit(PINL, IR_LEFT))
+					moveMotors(75, 40);
 			}
 
-			if (ultrasoon_distance() > 8000)
+			if ((ultrasoon_distance() > 8000) && (currentMillis - previousMillis >= 350))
+			{
+				previousMillis = currentMillis;
 				currentState = 1;
+			}
 			else
 				currentState = 3;
 
@@ -192,7 +209,7 @@ int main()
 		case 4: //Rotate 90 degrees (left or right, depending on which side trees were on)
 			if (treeSide == 0)
 			{
-				if (mpu_data.z_angle <= -90)
+				if (mpu_data.z_angle <= -80)
 				{
 					moveMotors(0, 0);
 					previousMillis = currentMillis;
@@ -203,21 +220,21 @@ int main()
 			}
 			else
 			{
-				if (mpu_data.z_angle >= 90)
+				if (mpu_data.z_angle >= 80)
 				{
 					moveMotors(0, 0);
 					previousMillis = currentMillis;
 					currentState = 5;
 				}
 				else
-					moveMotors(60, -60);
+					moveMotors(70, -50);
 			}
 			break;
 
 		case 5: //Drive forward a bit
 			moveMotors(60, 55);
 
-			if (currentMillis - previousMillis >= 750)
+			if (currentMillis - previousMillis >= 600)
 			{
 				mpu_set_zero(&mpu_data);
 				currentState = 6;
@@ -229,27 +246,29 @@ int main()
 		case 6: //Rotate another 90 degrees (left or right, depending on which side trees were on), then flip the side, return to state 1
 			if (treeSide == 0)
 			{
-				if (mpu_data.z_angle <= -90)
+				if (mpu_data.z_angle <= -80)
 				{
 					moveMotors(0, 0);
 					treeSide = 1;
 					previousMillis = currentMillis;
 					currentState = 0;
+					pathsDone++;
 				}
 				else
 					moveMotors(-60, 60);
 			}
 			else
 			{
-				if (mpu_data.z_angle >= 90)
+				if (mpu_data.z_angle >= 80)
 				{
 					moveMotors(0, 0);
 					treeSide = 0;
 					previousMillis = currentMillis;
 					currentState = 0;
+					pathsDone++;
 				}
 				else
-					moveMotors(60, -60);
+					moveMotors(70, -50);
 			}
 			break;
 
